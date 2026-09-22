@@ -8,8 +8,10 @@
   const audio = new AudioEngine();
 
   const IMAGES = ['hero_torso', 'hero_arm', 'hero_leg', 'hero_full', 'crawler', 'drone', 'jelly', 'turret', 'brute', 'pod',
-    'boss', 'crate', 'barrel', 'capsule', 'medkit', 'platform', 'colony', 'spires', 'wreck',
-    'spitter', 'bat', 'saucer', 'sentinel', 'queen', 'fungi', 'machinery'];
+    'crate', 'barrel', 'capsule', 'medkit', 'platform', 'colony', 'spires', 'wreck',
+    'spitter', 'bat', 'saucer', 'sentinel', 'fungi', 'machinery',
+    'boss_torso', 'boss_cannon', 'boss_claw', 'boss_leg',
+    'queen_torso', 'queen_scythe', 'queen_leg', 'queen_tail'];
   const JPGS = ['ground', 'metal', 'sky', 'title', 'explosion', 'plasma', 'cave', 'hull', 'cave_bg', 'ship_bg'];
 
   // ---------- Eingabe ----------
@@ -205,6 +207,8 @@
       at: params.get('at') && !carry ? Number(params.get('at')) : 0,
       onBoss: () => { audio.fadeMusic(1.5); setTimeout(() => playMusic(music.boss, 0.6), 1600); },
     });
+    window.SB = game;
+    window.SBR = renderer;                     // zum Nachschauen und Justieren in der Konsole (window.game ist das Canvas)
     mode = 'play';
     audio.confirm();
     audio.muffle(false);
@@ -246,7 +250,7 @@
         else { mode = 'title'; game = null; titleT = 0; audio.stopMusic(); audio.muffle(false); }
       }
       if (game) renderer.draw(game, {
-        mode, fps: showFps ? fps : 0, device, zoom: Number(params.get('zoom')) || 0,
+        mode, fps: showFps ? fps : 0, device, zoom: Number(params.get('zoom')) || 0, zoomOn: params.get('on'),
         cross: inp.mouseAim && mode === 'play' ? { x: mouse.x, y: mouse.y } : null,
       });
     }

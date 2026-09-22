@@ -15,8 +15,9 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "art" / "raw"
 SEEDS = [11, 23]
 EXTRA_SEEDS = {"hero_torso": [11, 23, 37, 41], "hero_arm": [11, 23, 37, 41], "hero_leg": [11, 23, 37, 41],
-               "hero_full": [11, 23, 37, 41], "boss": [11, 23, 37, 41],
-               "queen": [11, 23, 37]}
+               "hero_full": [11, 23, 37, 41], "boss_torso": [11, 23, 37], "boss_cannon": [11, 23, 37],
+               "boss_claw": [11, 23, 37], "boss_leg": [11, 23, 37], "queen_torso": [11, 23, 37],
+               "queen_scythe": [11, 23, 37], "queen_leg": [11, 23, 37], "queen_tail": [11, 23]}
 
 GREEN = ("highly detailed sci-fi video game sprite, polished 3D render, sharp clean silhouette, centered, "
          "the whole object fully visible with margin around it, isolated on a flat uniform pure bright green "
@@ -61,10 +62,6 @@ ASSETS = {
               "view profile", GREEN, 1536, 1024),
     "pod": ("an organic alien hive egg sack growing from the ground, glossy dark purple leathery skin with pulsing "
             "glowing green veins and a slimy opening on top", GREEN, 1024, 1024),
-    "boss": ("a colossal biomechanical alien overlord war machine boss, giant armored dark purple and black body "
-             "with a huge menacing skull-like head with glowing green eyes and a glowing green reactor core in the "
-             "chest, two massive arm cannons, thick cables and tentacles, facing to the left, front three quarter "
-             "view, full body", GREEN, 1536, 1536),
     # Requisiten
     "crate": ("a sturdy sci-fi military supply crate, grey metal box with orange hazard stripes and small glowing "
               "cyan lights, front view", GREEN, 1024, 1024),
@@ -95,15 +92,42 @@ ASSETS = {
               "gold visor, firing a huge plasma rifle, standing on an alien planet, giant explosions and alien "
               "creatures in the background, a huge ringed planet in the sky, dramatic orange and teal lighting",
               "no text, no letters, no logo, no frame", 1536, 864),
+    # Der Spaceboss in Einzelteilen (wie der Held zusammengesetzt und prozedural animiert).
+    # Alle Teile in exakter Seitenansicht nach rechts, im Spiel gespiegelt.
+    "boss_torso": ("the armless and legless torso of a colossal biomechanical alien war machine, heavy dark purple and "
+                   "black armor plates, a big glowing green reactor core in the chest, a menacing skull-like head with "
+                   "glowing green eyes and horns on top, thick cables and tubes, torso ends at the hips, without arms, "
+                   "without legs, exact side view profile facing to the right", GREEN, 1024, 1024),
+    "boss_cannon": ("a gigantic armored alien mech arm holding a huge triple barrel plasma cannon, dark purple and "
+                    "black armor with glowing green energy coils, from the round shoulder joint to the muzzle, arm "
+                    "stretched straight out horizontally, cannon pointing to the right, exact side view",
+                    GREEN, 1536, 768),
+    "boss_claw": ("a gigantic armored alien mech arm ending in huge curved talons, dark purple and black armor with "
+                  "glowing green seams, from the round shoulder joint to the claw tips, arm stretched straight out "
+                  "horizontally, claws pointing to the right, exact side view", GREEN, 1536, 768),
+    "boss_leg": ("a single gigantic armored alien mech leg with a reverse digitigrade knee, from the hip joint to a "
+                 "heavy three toed clawed foot, dark purple and black armor with glowing green seams, standing "
+                 "straight and vertical, exact side view, foot pointing to the right, nothing else", GREEN, 768, 1536),
+    # Die Hive Queen in Einzelteilen, ebenfalls Seitenansicht nach rechts
+    "queen_torso": ("the armless and legless torso of a colossal alien hive queen, glossy black and dark purple "
+                    "exoskeleton, long elongated backward crested head with many glowing magenta eyes and fanged "
+                    "jaws, ribbed chest with a glowing pink core, dripping slime, torso ends at the hips, without "
+                    "arms, without legs, exact side view profile facing to the right", GREEN, 1024, 1024),
+    "queen_scythe": ("a gigantic alien scythe arm of a hive queen, from the round shoulder joint to the long curved "
+                     "blade tip, glossy black and purple chitin with glowing magenta seams, arm stretched straight "
+                     "out horizontally, blade pointing to the right, exact side view", GREEN, 1536, 768),
+    "queen_leg": ("a single gigantic alien hive queen leg with a reverse digitigrade knee, from the hip joint to a "
+                  "sharp clawed foot, glossy black and purple chitin with glowing magenta seams, standing straight "
+                  "and vertical, exact side view, claw pointing to the right, nothing else", GREEN, 768, 1536),
+    "queen_tail": ("a long segmented alien queen tail with a glowing magenta stinger at the tip, glossy black and "
+                   "purple chitin, stretched out straight horizontally, tip pointing to the right, exact side view, "
+                   "nothing else", GREEN, 1536, 768),
     # Level 2: Hive Caverns
     "spitter": ("a squat biomechanical alien spitter creature with a swollen glowing acid sac on its back, dark purple "
                 "armored hide, wide open fanged mouth and glowing green eyes, crouching on short legs, facing to the "
                 "left, exact side view profile", GREEN, 1024, 1024),
     "bat": ("a flying alien bat creature with wide spread leathery membrane wings, dark purple skin with glowing pink "
             "veins, glowing magenta eyes and sharp claws, front view, wings fully spread", GREEN, 1024, 1024),
-    "queen": ("a colossal alien hive queen boss creature, huge glossy black and purple exoskeleton, elongated crested "
-              "head with many glowing magenta eyes, massive scythe claws, a swollen glowing pink egg sac abdomen, "
-              "dripping slime, facing to the left, front three quarter view, full body", GREEN, 1536, 1536),
     "cave": ("organic alien cave rock texture, dark purple and black wet stone with fleshy veins, small glowing pink "
              "bioluminescent spots, " + TILE, "", 1024, 1024),
     "cave_bg": ("a vast dark underground alien hive cavern, huge organic pillars and ribbed walls, glowing pink and "

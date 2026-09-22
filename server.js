@@ -67,7 +67,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, {
       'Content-Type': TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream',
       'Content-Length': st.size,
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-store',
     });
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);

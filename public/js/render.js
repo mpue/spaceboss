@@ -19,6 +19,25 @@
     legTop: 0.02,
   };
 
+  // Bosse aus Einzelteilen. Punkte in Bruchteilen des jeweils freigestellten Bildes.
+  const BOSS = {
+    boss: {
+      torso: { hip: { x: 0.52, y: 0.93 } },
+      leg: { hip: { x: 0.35, y: 0.08 }, knee: { x: 0.68, y: 0.40 }, ankle: { x: 0.32, y: 0.80 }, cut: 0.40 },
+      arm: { a: { x: 0.10, y: 0.45 }, b: { x: 1.0, y: 0.45 } },
+      arm2: { a: { x: 0.08, y: 0.50 }, b: { x: 0.97, y: 0.50 } },
+      arm2Front: true,
+    },
+    queen: {
+      torso: { hip: { x: 0.45, y: 0.97 } },
+      leg: { hip: { x: 0.45, y: 0.06 }, knee: { x: 0.85, y: 0.40 }, ankle: { x: 0.20, y: 0.68 }, cut: 0.42 },
+      arm: { a: { x: 0.08, y: 0.50 }, b: { x: 0.99, y: 0.68 } },
+      arm2: { a: { x: 0.08, y: 0.50 }, b: { x: 0.99, y: 0.68 } },
+      tail: { a: { x: 0.03, y: 0.50 }, b: { x: 0.98, y: 0.45 } },
+      arm2Front: false,
+    },
+  };
+
   function glow(color, r, core = 0.25) {
     const c = document.createElement('canvas');
     c.width = c.height = r * 2;
@@ -102,6 +121,7 @@
         this.shinD = tinted(this.shin, '#0a0612', 0.45);
       }
       if (images.hero_torso) this.torsoW = tinted(images.hero_torso, '#ffffff', 0.7);
+      this.rigCache = new Map();          // geteilte Beine und abgedunkelte Gliedmaßen je Boss
       this.dust = Array.from({ length: 70 }, () => ({ x: Math.random() * W, y: Math.random() * H, z: 0.3 + Math.random() * 1.2,
         s: Math.random() * TAU }));
       this.levelCache = null;
@@ -191,8 +211,9 @@
       const cx = Math.round(g.cam.x - ox), cy = Math.round(g.cam.y - oy);
       this.drawBackground(g, cx, cy);
       c.save();
-      if (screen.zoom) {                  // Debug: ?zoom=3 vergrößert um den Helden
-        c.translate(W / 2, H / 2); c.scale(screen.zoom, screen.zoom); c.translate(-g.player.x, -g.player.y);
+      if (screen.zoom) {                  // Debug: ?zoom=3 vergrößert um den Helden (mit &on=boss um den Boss)
+        const t = screen.zoomOn === 'boss' && g.boss ? g.boss : g.player;
+        c.translate(W / 2, H / 2); c.scale(screen.zoom, screen.zoom); c.translate(-t.x, -t.y);
       } else c.translate(-cx, -cy);
       this.drawWorldBack(g);
       for (const e of g.enemies) if (e.type === 'boss') this.drawBoss(g, e);
@@ -554,11 +575,14 @@
       const feet = p.y + p.h / 2;
       c.save();
       if (p.ghost !== undefined) { c.globalAlpha = 0.35 * p.ghost; c.globalCompositeOperation = 'lighter'; }
-      if (p.dead) { c.translate(p.x, p.y); c.rotate(p.spin); c.translate(-p.x, -p.y); }
+      if (p.dead) {                       // kippt um den Fußpunkt, nicht um die Mitte
+        const fx = p.x, fy = p.y + p.h / 2 - 16;
+        c.translate(fx, fy); c.rotate(p.spin); c.translate(-fx, -fy);
+      }
       c.translate(p.x, 0);
       c.scale(f, 1);
       // lokale Werte (Blick nach rechts)
-      const la = f > 0 ? p.aim : Math.PI - p.aim;
+      const la = p.dead ? 1.15 : (f > 0 ? p.aim : Math.PI - p.aim);   // tot: Arm hängt herab
       const speed = Math.abs(p.vx) / GameDefs.P.run;
       const run = p.onGround && speed > 0.08;
       const ph = p.walk;
@@ -579,7 +603,10 @@
       const shinH = legLen * (1 - HERO.knee + 0.02) / (1 - HERO.legTop);
       const legW = thighH * lw * 1.25;
       let fa, fb, ba, bb;       // Oberschenkel- und Kniewinkel vorn/hinten
-      if (p.dead) { fa = -0.4; fb = 0.6; ba = 0.5; bb = 0.9; }
+      if (p.dead) {                      // Beine sacken zusammen, eins angewinkelt
+        const s = p.fell ? 1 : 0.5;
+        fa = -0.25 - 0.35 * s; fb = 0.35 + 0.75 * s; ba = 0.2 + 0.3 * s; bb = 0.25 + 0.5 * s;
+      }
       else if (p.crouch) { fa = -1.25; fb = 2.1; ba = -0.5; bb = 1.9; }
       else if (!p.onGround) {
         if (p.vy < 0) { fa = -0.75; fb = 1.3; ba = 0.25; bb = 0.8; }
@@ -786,31 +813,140 @@
       c.fillStyle = '#9dff4a'; c.fillRect(e.x - w / 2, y, w * Math.max(0, e.hp / e.maxHp), 6);
     }
 
-    drawBoss(g, e) {
-      const c = this.c, cfg = e.cfg, im = this.img[cfg.sprite];
-      const h = cfg.h, col = this.glowOf(cfg.color);
-      if (!im) { c.fillStyle = '#402050'; const b = g.hitbox(e); c.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0); return; }
-      const rage = e.phase === 3 || cfg.rage ? 0.5 + 0.5 * Math.sin(g.time * 10) : 0;
-      c.globalCompositeOperation = 'lighter';
-      this.gl(col, e.x + e.core.x, e.y + e.core.y, 360 + 60 * Math.sin(g.time * 4), 0.35 + rage * 0.3);
-      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
-      this.spr(cfg.sprite, e.x, e.y + 40, h, { flash: Math.max(e.flash * 0.6, e.dying ? 0.3 + 0.3 * Math.sin(g.time * 30) : 0) });
-      // Endform: rotes Glühen über dem ganzen Körper
-      if (cfg.rage) {
-        if (!this.rageImg) this.rageImg = tinted(im, '#ff1a3a', 1);
-        const w = h * im.width / im.height;
-        c.globalCompositeOperation = 'lighter';
-        c.globalAlpha = 0.09 + 0.09 * rage;
-        c.drawImage(this.rageImg, e.x - w / 2, e.y + 40 - h / 2, w, h);
+    // Ein Teil so drehen und skalieren, dass "pivot" auf (x,y) liegt und pivot->other in Richtung a zeigt
+    piece(img, piv, oth, x, y, a, len, dark) {
+      if (!img) return;
+      const c = this.c;
+      const vx = (oth.x - piv.x) * img.width, vy = (oth.y - piv.y) * img.height;
+      const nat = Math.atan2(vy, vx), s = len / Math.hypot(vx, vy);
+      c.save();
+      c.translate(x, y);
+      c.rotate(a - nat);
+      c.scale(s, s);
+      c.drawImage(img, -piv.x * img.width, -piv.y * img.height, img.width, img.height);
+      c.restore();
+    }
+
+    // Geteiltes Bein und dunkle Kopien, einmal je Boss vorbereitet
+    rigParts(kind) {
+      let p = this.rigCache.get(kind);
+      if (!p) {
+        const R = GameDefs.RIGS[kind], F = BOSS[kind], leg = this.img[R.parts.leg];
+        if (!leg) return null;
+        p = {
+          legTop: slice(leg, 0, F.leg.cut + 0.05),
+          legBot: slice(leg, F.leg.cut - 0.03, 1),
+          arm2D: this.img[R.parts.arm2] ? tinted(this.img[R.parts.arm2], '#0c0616', 0.32) : null,
+          tailD: R.parts.tail && this.img[R.parts.tail] ? tinted(this.img[R.parts.tail], '#0c0616', 0.3) : null,
+        };
+        p.legTopD = tinted(p.legTop, '#08040e', 0.5);
+        p.legBotD = tinted(p.legBot, '#08040e', 0.5);
+        this.rigCache.set(kind, p);
       }
+      return p;
+    }
+
+    // Bein aus Oberschenkel und Unterschenkel, Kniewinkel aus Zwei-Knochen-IK
+    bossLeg(kind, foot, dark) {
+      const R = GameDefs.RIGS[kind], B = BOSS[kind], P = this.rigParts(kind);
+      const l1 = R.thigh, l2 = R.shin;
+      const d = clamp(Math.hypot(foot.x, foot.y), Math.abs(l1 - l2) + 4, l1 + l2 - 4);
+      const a = Math.atan2(foot.y, foot.x);
+      const A = Math.acos(clamp((d * d + l1 * l1 - l2 * l2) / (2 * d * l1), -1, 1));
+      const t1 = a - A;                                  // Knie zeigt nach vorn (umgekehrtes Knie)
+      const kx = Math.cos(t1) * l1, ky = Math.sin(t1) * l1;
+      const t2 = Math.atan2(foot.y - ky, foot.x - kx);
+      const top = { x: B.leg.hip.x, y: B.leg.hip.y / (B.leg.cut + 0.05) };
+      const topKnee = { x: B.leg.knee.x, y: B.leg.cut / (B.leg.cut + 0.05) };
+      const botSpan = 1 - (B.leg.cut - 0.03);
+      const botKnee = { x: B.leg.knee.x, y: 0.03 / botSpan };
+      const botAnkle = { x: B.leg.ankle.x, y: (B.leg.ankle.y - B.leg.cut + 0.03) / botSpan };
+      this.piece(dark ? P.legTopD : P.legTop, top, topKnee, 0, 0, t1, l1);
+      this.piece(dark ? P.legBotD : P.legBot, botKnee, botAnkle, kx, ky, t2, l2);
+    }
+
+    // Der zusammengesetzte Boss: Schwanz, Beine, beide Arme, Rumpf
+    drawBossRig(g, e) {
+      const c = this.c, cfg = e.cfg, kind = cfg.rig, R = e.R, F = BOSS[kind], rg = e.rig, face = -1;
+      const I = this.img, P = this.rigParts(kind);
+      if (!P || !I[R.parts.torso] || !I[R.parts.arm]) return false;
+      const flash = Math.max(e.hitFlash || 0, e.dying ? 0.25 + 0.25 * Math.sin(g.time * 30) : 0);
+      const kx = e.kickX || 0, ky = e.kickY || 0;
+      const arm2 = () => this.piece(P.arm2D, F.arm2.a, F.arm2.b, R.clawSh.x, R.clawSh.y, rg.claw, R.clawLen);
+      c.save();
+      c.translate(rg.hipX + kx, rg.hipY + ky);
+      c.scale(face, 1);
+      // Schwanz und hinteres Bein liegen hinter dem Körper
+      if (R.tail && P.tailD) this.piece(P.tailD, F.tail.a, F.tail.b, R.tail.x, R.tail.y, Math.PI - 0.32 - rg.tail, R.tail.len);
+      c.save(); c.translate(-22, -6); this.bossLeg(kind, rg.feet[1], true); c.restore();
+      if (!F.arm2Front) arm2();
+      // Rumpf
+      const tS = I[R.parts.torso], TH = R.torsoH, TW = TH * tS.width / tS.height;
+      c.save();
+      c.rotate(rg.lean);
+      c.drawImage(tS, -F.torso.hip.x * TW, -F.torso.hip.y * TH, TW, TH);
+      if (flash > 0 && this.white[R.parts.torso]) {
+        c.globalAlpha = 0.75 * flash;
+        c.drawImage(this.white[R.parts.torso], -F.torso.hip.x * TW, -F.torso.hip.y * TH, TW, TH);
+        c.globalAlpha = 1;
+      }
+      c.restore();
+      // vorderes Bein, vorderer Arm (Kanone oder Sichel)
+      this.bossLeg(kind, rg.feet[0], false);
+      if (F.arm2Front) arm2();
+      this.piece(I[R.parts.arm], F.arm.a, F.arm.b, R.shoulder.x, R.shoulder.y, rg.aim,
+        R.armLen - (e.recoil || 0) * 40);
+      if (flash > 0 && this.white[R.parts.arm]) {          // Treffer blitzen über den ganzen Körper
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = 0.5 * flash;
+        this.piece(this.white[R.parts.arm], F.arm.a, F.arm.b, R.shoulder.x, R.shoulder.y, rg.aim, R.armLen);
+        c.globalAlpha = 1;
+        c.globalCompositeOperation = 'source-over';
+      }
+      c.restore();
+      return true;
+    }
+
+    drawBoss(g, e) {
+      const c = this.c, cfg = e.cfg;
+      const rage = e.phase === 3 || cfg.rage ? 0.5 + 0.5 * Math.sin(g.time * 10) : 0;
+      if (e.rig) return this.drawBossParts(g, e, rage);
+      c.fillStyle = '#402050';
+      const b = g.hitbox(e);
+      c.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);   // Notbehelf, falls Teile fehlen
+    }
+
+    // Zusammengesetzter Boss mit Leuchtpunkten, Zorn-Färbung und Schockwellen
+    drawBossParts(g, e, rage) {
+      const c = this.c, cfg = e.cfg, R = e.R, rg = e.rig, face = -1;
+      const col = this.glowOf(cfg.color);
+      const at = (o) => ({ x: rg.hipX + o.x * face + (e.kickX || 0), y: rg.hipY + o.y + (e.kickY || 0) });
+      const core = at(R.core), eye = at(R.eye);
       c.globalCompositeOperation = 'lighter';
-      const eye = e.atk === 'volley' ? 1 : 0.5;
-      this.gl(this.glows.red, e.x + e.eye.x, e.y + e.eye.y, 90 + 50 * eye, 0.6 + 0.3 * eye);
-      this.gl(col, e.x + e.core.x, e.y + e.core.y, 130 + 30 * Math.sin(g.time * 6), 0.8);
-      if (e.atk === 'spread' || e.atk === 'acid') this.gl(col, e.x + e.cannon.x, e.y + e.cannon.y, 160, 0.6);
-      if ((e.atk === 'slam' || e.atk === 'rings' || e.atk === 'beam') && e.atkT < 0.9) this.gl(this.glows.white, e.x + e.core.x, e.y + e.core.y, 200 * e.atkT / 0.9, 0.8);
+      this.gl(col, core.x, core.y, 380 + 60 * Math.sin(g.time * 4), 0.3 + rage * 0.3);
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
-      // Schockwellen
+      if (!this.drawBossRig(g, e)) return;
+      if (cfg.rage) {                         // Endform glüht rot
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = 0.1 + 0.1 * rage;
+        this.gl(this.glowOf('#ff2a4a'), core.x, core.y - 60, 620, 1);
+        c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      }
+      const muz = R.aim === 'head' ? at(R.mouth)
+        : { x: rg.hipX + (R.shoulder.x + Math.cos(rg.aim) * R.armLen) * face, y: rg.hipY + R.shoulder.y + Math.sin(rg.aim) * R.armLen };
+      c.globalCompositeOperation = 'lighter';
+      const eyeGlow = e.atk === 'volley' ? 1 : 0.5;
+      this.gl(this.glows.red, eye.x, eye.y, 90 + 50 * eyeGlow, 0.55 + 0.35 * eyeGlow);
+      this.gl(col, core.x, core.y, 150 + 30 * Math.sin(g.time * 6), 0.8);
+      if (e.atk === 'spread' || e.atk === 'volley' || e.atk === 'acid') this.gl(col, muz.x, muz.y, 150, 0.6);
+      if ((e.atk === 'slam' || e.atk === 'rings' || e.atk === 'beam') && e.atkT < 0.9) this.gl(this.glows.white, core.x, core.y, 220 * e.atkT / 0.9, 0.8);
+      if (e.crit > 0) this.gl(this.glows.gold, core.x, core.y, 240 * Math.min(1, e.crit * 4), Math.min(1, e.crit * 4));
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      this.bossWaves(g);
+    }
+
+    bossWaves(g) {
+      const c = this.c;
       for (const w of g.waves) {
         c.globalCompositeOperation = 'lighter';
         const gr = c.createLinearGradient(w.x, 0, w.x - w.dir * 160, 0);
@@ -1079,14 +1215,22 @@
       // Boss
       const b = g.boss;
       if (b && !b.dead && !b.intro) {
-        const w = 1100, x = W / 2 - w / 2, y = H - 70;
+        const w = 1100, jit = (b.barFlash || 0) * 5, x = W / 2 - w / 2 + rnd2(jit), y = H - 70 + rnd2(jit);
         c.fillStyle = 'rgba(4,8,16,0.7)'; roundRect(c, x - 16, y - 46, w + 32, 80, 12); c.fill();
         this.glowText(b.cfg.name, `900 24px ${FONT}`, '#ff6a6a', '#ff0000', 12, W / 2, y - 14);
         c.fillStyle = 'rgba(255,255,255,0.1)'; c.fillRect(x, y, w, 18);
-        const k = Math.max(0, b.hp / b.maxHp);
+        const k = Math.max(0, b.hp / b.maxHp), lag = Math.max(k, (b.hpLag ?? b.hp) / b.maxHp);
+        // weißer Rest: der Schaden der letzten Sekunde läuft sichtbar nach
+        c.fillStyle = 'rgba(255,255,255,0.85)'; c.fillRect(x + w * k, y, w * (lag - k), 18);
         const gr = c.createLinearGradient(x, 0, x + w, 0);
         gr.addColorStop(0, '#ff2a4a'); gr.addColorStop(1, '#9dff4a');
         c.fillStyle = gr; c.fillRect(x, y, w * k, 18);
+        if (b.barFlash > 0) {
+          c.globalCompositeOperation = 'lighter';
+          c.globalAlpha = b.barFlash * 0.3;
+          c.fillStyle = '#ffffff'; c.fillRect(x, y, w * k, 18);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+        }
         c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(x + w * 0.33, y, 3, 18); c.fillRect(x + w * 0.66, y, 3, 18);
       }
       // Banner
@@ -1186,6 +1330,8 @@
       this.glowText('NO MOUSE?  ARROWS AIM + J FIRE + K JUMP + L DASH', `600 18px ${FONT}`, '#6a8aa0', '#000', 0, W / 2, 1045);
     }
   }
+
+  function rnd2(a) { return a ? (Math.random() * 2 - 1) * a : 0; }
 
   function hexRgb(h) {
     const n = parseInt(h.slice(1), 16);

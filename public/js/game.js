@@ -16,7 +16,7 @@
     grav: 3300, jump: 1280, jet: 1080, fall: 1500,
     hover: 150, fuelUse: 1.1, fuelRegen: 1.6,
     dash: 1400, dashT: 0.17, dashCd: 0.55,
-    hp: 100, inv: 1.2,
+    hp: 100, inv: 1.45,
     shoulder: { x: 6, y: -24 },          // Schulter relativ zur Mitte (Blick nach rechts)
     arm: 124,                            // Schulter bis Mündung
   };
@@ -44,22 +44,54 @@
     boss: { w: 440, h: 600, hp: 4200, score: 25000, dmg: 30, coins: 60 },
   };
 
+  // Der Spaceboss aus Einzelteilen: Maße in Weltpixeln, Blickrichtung nach rechts gerechnet
+  // (im Spiel schaut er nach links, das Zeichnen spiegelt). Hüfte ist der Nullpunkt des Skeletts.
+  const RIGS = {
+    // Der Spaceboss: Kanonenarm zielt, Klauenarm schlägt zu
+    boss: {
+      parts: { torso: 'boss_torso', arm: 'boss_cannon', arm2: 'boss_claw', leg: 'boss_leg' },
+      aim: 'arm',                        // die Mündung sitzt am gezielten Arm
+      torsoH: 520,                       // Zeichenhöhe des Rumpfes
+      stand: 330,                        // Hüfthöhe über dem Boden
+      thigh: 161, shin: 197,             // Oberschenkel und Unterschenkel
+      step: 240, lift: 75,               // Schrittlänge und Fußhebung
+      shoulder: { x: -10, y: -258 },     // Kanonenschulter relativ zur Hüfte
+      clawSh: { x: 10, y: -240 },        // Schulter des Klauenarms (zweite Hand, vor dem Rumpf)
+      armLen: 430, clawLen: 370,
+      core: { x: 100, y: -234, r: 95 },  // Reaktorkern (Kerntreffer)
+      eye: { x: 147, y: -328 },
+      body: { x0: -210, y0: -500, x1: 210, y1: 340 },
+    },
+    // Die Hive Queen: zwei Sichelklauen, Säure kommt aus dem Maul, dazu ein Schwanz
+    queen: {
+      parts: { torso: 'queen_torso', arm: 'queen_scythe', arm2: 'queen_scythe', leg: 'queen_leg', tail: 'queen_tail' },
+      aim: 'head',                       // die Säure kommt aus dem Maul, nicht aus dem Arm
+      torsoH: 560, stand: 300,
+      thigh: 176, shin: 174,
+      step: 250, lift: 80,
+      shoulder: { x: -34, y: -291 },     // vordere Sichelklaue
+      clawSh: { x: -73, y: -308 },       // hintere Sichelklaue
+      armLen: 430, clawLen: 430,
+      tail: { x: -70, y: -90, len: 430 },
+      core: { x: 49, y: -196, r: 110 },
+      eye: { x: 209, y: -386 },
+      mouth: { x: 234, y: -291 },        // aus dem Maul kommt die Säure
+      body: { x0: -230, y0: -510, x1: 230, y1: 300 },
+    },
+  };
+  const RIG = RIGS.boss;
+
   // Bosse: Lage der Trefferzone, des Kerns (mehr Schaden), der Kanone und des Auges relativ zur Mitte,
   // Zeichenhöhe des Sprites und die Angriffe je Phase.
   const BOSSES = {
-    spaceboss: { name: 'SPACEBOSS', sprite: 'boss', h: 820, hp: 4200, score: 25000, lift: 430,
-      body: { x0: -220, y0: -288, x1: 238, y1: 409 }, core: { x: -48, y: -99, r: 80 }, cannon: { x: -380, y: 106 },
-      eye: { x: -127, y: -231 }, color: '#9dff4a', minion: 'drone',
+    spaceboss: { name: 'SPACEBOSS', rig: 'boss', hp: 4200, score: 25000, color: '#9dff4a', minion: 'drone',
       pool: [['spread', 'volley', 'slam'], ['strikes', 'drones', 'strikes'], ['rings', 'rings', 'slam']],
       retreat: true, intro: 'THE SPACEBOSS APPROACHES', down: 'SPACEBOSS RETREATS' },
-    queen: { name: 'HIVE QUEEN', sprite: 'queen', h: 800, hp: 5200, score: 30000, lift: 430,
-      body: { x0: -230, y0: -320, x1: 279, y1: 416 }, core: { x: -40, y: -40, r: 100 }, cannon: { x: -183, y: -40 },
-      eye: { x: -120, y: -216 }, color: '#ff5ad2', minion: 'bat',
+    queen: { name: 'HIVE QUEEN', rig: 'queen', hp: 5200, score: 30000, color: '#ff5ad2', minion: 'bat',
       pool: [['acid', 'spread', 'brood'], ['bats', 'slam', 'acid'], ['rings', 'brood', 'acid']],
       intro: 'THE HIVE QUEEN AWAKENS', down: 'HIVE QUEEN SLAIN' },
-    final: { name: 'SPACEBOSS  -  FINAL FORM', sprite: 'boss', h: 820, hp: 7000, score: 50000, lift: 430, rage: true,
-      body: { x0: -220, y0: -288, x1: 238, y1: 409 }, core: { x: -48, y: -99, r: 80 }, cannon: { x: -380, y: 106 },
-      eye: { x: -127, y: -231 }, color: '#ff4a6a', minion: 'saucer',
+    final: { name: 'SPACEBOSS  -  FINAL FORM', rig: 'boss', hp: 7000, score: 50000, rage: true,
+      color: '#ff4a6a', minion: 'saucer',
       pool: [['spread', 'volley', 'beam', 'slam'], ['strikes', 'drones', 'beam', 'rings'], ['rings', 'beam', 'strikes', 'volley']],
       intro: 'THE SPACEBOSS RETURNS', down: 'SPACEBOSS DESTROYED' },
   };
@@ -93,7 +125,7 @@
       this.banner = null;
       this.acc = 0;
       this.spawnIdx = 0;
-      this.waveT = 12;
+      this.waveT = 26;
       this.lock = false;            // Kamera in der Boss-Arena festgesetzt
       this.boss = null;
       this.won = false; this.over = false; this.endT = 0;
@@ -113,6 +145,7 @@
         Object.assign(this.player, { weapon: c.weapon, ammo: c.ammo, grenades: c.grenades, hp: Math.max(c.hp, 60) });
       }
       this.startTime = this.time;
+      this.ease = 0;                // 1 = ganz zu Beginn von Level 1, 0 = volle Härte
       this.say(level.def.name, '#ffb14a', 3, false, 'STAGE ' + (level.index + 1) + '  -  ' + level.def.sub);
       this.cam = { x: 0, y: level.ph - H };
       this.cam.x = clamp(this.player.x - W * 0.35, 0, level.pw - W);
@@ -157,7 +190,8 @@
       return { x, y, w: P.w, h: P.h, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, jumpBuf: 0,
         jets: 1, fuel: 1, hovering: false, dashT: 0, dashCd: 0, airDash: true, inv: 2, hp: P.hp,
         aim: 0, crouch: false, fireCd: 0, weapon: 'blaster', ammo: { blaster: Infinity }, grenades: 3,
-        walk: 0, recoil: 0, dead: false, deadT: 0, spin: 0, land: 0, stepT: 0, drop: 0, fired: 0,
+        walk: 0, recoil: 0, dead: false, deadT: 0, spin: 0, spinV: 0, fell: false, bounced: false,
+        land: 0, stepT: 0, drop: 0, fired: 0,
         muzzle: { x, y }, afterimages: [] };
     }
 
@@ -257,6 +291,8 @@
 
     step(dt, input) {
       this.beam = null;
+      // Die erste Minute von Level 1 ist zum Warmwerden: Gegner feuern seltener und schwächer
+      this.ease = this.L.index === 0 ? clamp(1 - this.time / 60, 0, 1) : 0;
       this.updatePlayer(dt, input);
       this.spawnAhead();
       this.updateWaves(dt);
@@ -321,11 +357,41 @@
     updatePlayer(dt, input) {
       const p = this.player;
       if (p.dead) {
+        // Sterben: taumeln, aufschlagen, in die Seitenlage kippen und liegen bleiben
         p.deadT += dt;
-        p.vy += P.grav * dt;
-        p.spin += dt * 8 * -p.face;
+        p.vy = Math.min(P.fall, p.vy + P.grav * dt);
+        const lie = -p.face * Math.PI * 0.46;          // Endlage: flach auf dem Rücken
         const r = this.move(p, dt);
-        if (r.ground) { p.vx *= 0.8; p.vy = -p.vy * 0.3; }
+        if (!p.fell) {
+          p.spin += p.spinV * dt;
+          p.spinV += (lie - p.spin) * 2 * dt;          // das Taumeln zieht schon zur Endlage
+          p.spin = clamp(p.spin, Math.min(lie, 0) - 0.15, Math.max(lie, 0) + 0.15);   // nie über die Endlage hinaus
+          if (r.ground) {
+            if (p.vy > 700 && !p.bounced) {            // einmal aufprallen
+              p.bounced = true;
+              p.vy = -p.vy * 0.28; p.vx *= 0.6;
+              this.dust(p.x, p.y + p.h / 2, 10);
+              this.audio.land(0.4);
+            } else {
+              p.fell = true; p.spinV = 0; p.vy = 0;
+              this.dust(p.x, p.y + p.h / 2, 16);
+              this.audio.land(0.7);
+              this.shake = Math.max(this.shake, 0.3);
+              this.rumble(0.5, 0.4, 200);
+              for (let i = 0; i < 10; i++) this.part({ x: p.x + rnd(-30, 30), y: p.y + p.h / 2 - 10, vx: rnd(-200, 200),
+                vy: rnd(-260, -60), g: 1400, life: rnd(0.3, 0.7), size: rnd(2, 4), color: '#ffd27a', kind: 'spark' });
+            }
+          }
+        } else {
+          // liegt: rutscht aus und raucht
+          p.spin += (lie - p.spin) * (1 - Math.pow(0.002, dt));
+          p.vx *= Math.pow(0.02, dt);
+          p.vy = 0;
+          if (Math.random() < 0.25) this.part({ x: p.x + rnd(-24, 24), y: p.y + p.h / 2 - 20, vx: rnd(-20, 20),
+            vy: rnd(-90, -40), drag: 0.6, life: rnd(0.8, 1.6), size: rnd(12, 24), color: '#3a3438', kind: 'smoke' });
+          if (Math.random() < 0.06) this.part({ x: p.x + rnd(-20, 20), y: p.y + p.h / 2 - 24, vx: rnd(-60, 60),
+            vy: rnd(-160, -60), g: 900, life: rnd(0.2, 0.5), size: 2, color: '#ffb46a', kind: 'spark' });
+        }
         if (p.deadT > 2.2) {
           if (this.lives < 0) { this.over = true; return; }
           const np = this.makePlayer(this.respawn.x, this.respawn.y);
@@ -441,7 +507,7 @@
         }
       }
       if (r.acid) {
-        this.hurtPlayer(20, 0);
+        this.hurtPlayer(15, 0);
         if (!p.dead) { p.vy = -1300; p.jets = 1; p.boostT = 0.4; }
         for (let i = 0; i < 20; i++) this.part({ x: p.x + rnd(-30, 30), y: p.y + p.h / 2, vx: rnd(-200, 200), vy: rnd(-700, -200),
           g: 1800, life: rnd(0.4, 0.8), size: rnd(4, 9), color: '#8dff3a', kind: 'goo' });
@@ -611,7 +677,9 @@
       const p = this.player;
       if (p.dead) return;
       p.dead = true; p.deadT = 0; p.hp = 0;
-      p.vy = -1100; p.vx = -p.face * 350;
+      p.vy = -900; p.vx = -p.face * 420;
+      p.spinV = -p.face * rnd(2.5, 4);              // Taumeln in Stoßrichtung
+      p.crouch = false; p.h = P.h;
       this.lives--;
       this.audio.laser(false);
       this.audio.die();
@@ -674,6 +742,7 @@
 
     updateEnemy(e, dt) {
       e.t += dt;
+      const cool = 1 / (1 + 1.2 * this.ease);     // zu Beginn zählen die Feuerpausen langsamer herunter
       e.flash = Math.max(0, e.flash - dt * 6);
       const p = this.player, dx = p.x - e.x, dy = p.y - e.y, dist = Math.hypot(dx, dy);
       const alive = !p.dead;
@@ -684,9 +753,9 @@
             e.leapCd = (e.leapCd || 0) - dt;
             if (alive && Math.abs(dx) < 900 && Math.abs(dy) < 300) e.face = Math.sign(dx) || e.face;
             else if (!this.groundAhead(e, e.face)) e.face = -e.face;
-            e.vx = e.face * (alive && Math.abs(dx) < 900 ? 230 : 110);
+            e.vx = e.face * (alive && Math.abs(dx) < 900 ? 230 - 60 * this.ease : 110);
             if (!this.groundAhead(e, e.face) && Math.abs(dx) > 200) e.vx = 0;
-            if (alive && Math.abs(dx) < 340 && Math.abs(dy) < 200 && e.leapCd <= 0) {
+            if (alive && Math.abs(dx) < 340 && Math.abs(dy) < 200 && e.leapCd <= 0 && this.ease < 0.5) {
               e.vy = -950; e.vx = e.face * 560; e.leapCd = rnd(1.2, 2); e.onGround = false;
               this.audio.squish();
             }
@@ -705,7 +774,7 @@
           e.vx *= Math.pow(0.25, dt); e.vy *= Math.pow(0.25, dt);
           e.x += e.vx * dt; e.y += e.vy * dt;
           e.face = dx > 0 ? 1 : -1;
-          if (alive && dist < 1150 && (e.cd -= dt) <= 0) {
+          if (alive && dist < 1150 && (e.cd -= dt * cool) <= 0) {
             e.cd = rnd(1.3, 2.2);
             this.enemyShoot(e.x, e.y + 10, Math.atan2(dy, dx), 560, 'orb');
           }
@@ -717,7 +786,7 @@
           e.vx += clamp(tx - e.x, -1, 1) * 160 * dt; e.vy += (clamp(ty - e.y, -1, 1) * 120 - pulse * 60) * dt;
           e.vx *= Math.pow(0.4, dt); e.vy *= Math.pow(0.4, dt);
           e.x += e.vx * dt; e.y += e.vy * dt;
-          if (alive && dist < 900 && (e.cd -= dt) <= 0) {
+          if (alive && dist < 900 && (e.cd -= dt * cool) <= 0) {
             e.cd = rnd(1.8, 2.6);
             for (let k = 0; k < 3; k++) this.pending.push({ t: k * 0.15, fn: () => {
               if (!e.dead) this.ebullets.push({ kind: 'acid', x: e.x + rnd(-20, 20), y: e.y + 40, vx: rnd(-120, 120) + (p.x - e.x) * 0.4,
@@ -731,7 +800,7 @@
           e.face = dx > 0 ? 1 : -1;
           const my = e.ceil ? e.y + 20 : e.y - 20;
           e.aim = Math.atan2(p.y - 20 - my, p.x - e.x);
-          if (alive && dist < 1150 && (e.cd -= dt) <= 0) {
+          if (alive && dist < 1150 && (e.cd -= dt * cool) <= 0) {
             e.cd = rnd(1.8, 2.6);
             for (let k = 0; k < 3; k++) this.pending.push({ t: k * 0.13, fn: () => {
               if (e.dead) return;
@@ -749,7 +818,7 @@
           e.face = dx > 0 ? 1 : -1;
           e.vy = (e.home.y + Math.sin(e.t * 2) * 14 - e.y) * 4;
           this.move(e, dt, { noOneway: true });
-          if (alive && dist < 1300 && (e.cd -= dt) <= 0) {
+          if (alive && dist < 1300 && (e.cd -= dt * cool) <= 0) {
             e.shots = (e.shots || 0) + 1;
             e.cd = rnd(1.6, 2.2);
             const mx = e.x + e.face * 110, my = e.y - 10;
@@ -862,7 +931,9 @@
 
     enemyShoot(x, y, a, speed, kind = 'orb', color) {
       const big = kind === 'big';
-      this.ebullets.push({ kind, x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r: big ? 22 : 11, dmg: big ? 25 : 12,
+      const s = speed * (1 - 0.25 * this.ease);
+      this.ebullets.push({ kind, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, r: big ? 22 : 11,
+        dmg: Math.round((big ? 25 : 12) * (1 - 0.35 * this.ease)),
         life: 4, color: color || '#ff4a5a', t: 0 });
       this.audio.enemyShot(big);
     }
@@ -881,10 +952,11 @@
       }
       if (e.type === 'boss' && e.core) {
         const c = e.core;
-        if (Math.hypot(hx - (e.x + c.x), hy - (e.y + c.y)) < c.r) { dmg *= 1.6; e.crit = 0.1; }
+        if (Math.hypot(hx - (e.x + c.x), hy - (e.y + c.y)) < c.r) { dmg *= 1.6; e.crit = 0.25; }
       }
       e.hp -= dmg;
       e.flash = 1;
+      if (e.type === 'boss' && !e.dying) this.bossHit(e, dmg, hx, hy, dx, dy);
       if (!quiet) {
         this.audio.hit(EN[e.type].flesh ? 'flesh' : 'metal');
         const col = EN[e.type].flesh ? '#8dff3a' : '#ffd27a';
@@ -893,6 +965,48 @@
       }
       if (e.type === 'brute' || e.type === 'turret') e.vx += dx * 20;
       if (e.hp <= 0) this.killEnemy(e);
+    }
+
+    // Rückmeldung bei jedem Treffer auf den Boss: Aufblitzen, Rückstoß, Funken und Schadenszahlen
+    bossHit(e, dmg, hx, hy, dx, dy) {
+      const crit = e.crit > 0;
+      e.hitFlash = Math.min(1, (e.hitFlash || 0) + (crit ? 0.9 : 0.55));
+      e.kickX = clamp((e.kickX || 0) + dx * (crit ? 7 : 4), -26, 26);
+      e.kickY = clamp((e.kickY || 0) + dy * (crit ? 5 : 3), -20, 20);
+      e.barFlash = 1;
+      e.dmgAcc = (e.dmgAcc || 0) + dmg;
+      e.dmgCrit = e.dmgCrit || crit;
+      e.dmgX = hx; e.dmgY = hy;
+      this.audio.bossHit(crit);
+      const col = crit ? '#ffe36a' : '#ffd27a';
+      const n = crit ? 5 : 3;
+      for (let i = 0; i < n; i++) this.part({ x: hx, y: hy, vx: -dx * rnd(200, 800) + rnd(-300, 300),
+        vy: -dy * rnd(200, 800) + rnd(-300, 300), drag: 2, life: rnd(0.15, 0.4), size: rnd(2, 4), color: col, kind: 'spark' });
+      this.part({ x: hx, y: hy, life: crit ? 0.12 : 0.07, size: crit ? 150 : 90, color: col, kind: 'flash' });
+      if (crit) {
+        this.ring(hx, hy, 130, '#ffe36a');
+        this.shake = Math.max(this.shake, 0.12);
+      }
+    }
+
+    // Aufgelaufenen Schaden als Zahl zeigen, Blitz und Rückstoß abklingen lassen
+    updateBossHits(e, dt) {
+      e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt * 5);
+      e.barFlash = Math.max(0, (e.barFlash || 0) - dt * 7);
+      e.kickX = (e.kickX || 0) * Math.pow(0.002, dt);
+      e.kickY = (e.kickY || 0) * Math.pow(0.002, dt);
+      e.crit = Math.max(0, (e.crit || 0) - dt);
+      // Trefferleiste läuft dem echten Wert hinterher (der weiße Rest zeigt den frischen Schaden)
+      e.hpLag = e.hpLag === undefined ? e.hp : (e.hpLag > e.hp ? Math.max(e.hp, e.hpLag - Math.max(e.maxHp * 0.10, 400) * dt) : e.hp);
+      if ((e.dmgAcc || 0) > 0) {
+        e.dmgT = (e.dmgT || 0) + dt;
+        if (e.dmgT > 0.3) {
+          const crit = e.dmgCrit;
+          this.float(e.dmgX + rnd(-20, 20), e.dmgY, (crit ? '' : '') + '-' + Math.round(e.dmgAcc) + (crit ? '  CRIT!' : ''),
+            crit ? '#ffe36a' : '#ffffff');
+          e.dmgAcc = 0; e.dmgT = 0; e.dmgCrit = false;
+        }
+      }
     }
 
     killEnemy(e) {
@@ -934,9 +1048,9 @@
     updateWaves(dt) {
       if (this.lock || this.player.dead) return;
       if ((this.waveT -= dt) > 0) return;
-      this.waveT = rnd(9, 14);
-      if (this.enemies.length > 6) return;
-      const n = 2 + Math.floor(Math.random() * 2);
+      this.waveT = rnd(9, 14) + 8 * this.ease;
+      if (this.enemies.length > 6 || this.ease > 0.55) return;
+      const n = 2 + Math.floor(Math.random() * 2) - (this.ease > 0 ? 1 : 0);
       for (let i = 0; i < n; i++) {
         const e = this.addEnemy('drone', this.cam.x + W + 100 + i * 90, this.cam.y + 120 + i * 70);
         e.vx = -500;
@@ -946,12 +1060,17 @@
     // ---------- Boss ----------
 
     startBoss() {
-      const L = this.L, B = L.boss, cfg = BOSSES[L.def.boss];
-      const e = this.addEnemy('boss', B.x + 120, B.y - cfg.lift, { intro: true, introT: 0, phase: 1, atk: null, atkT: 0,
-        cd: 3.5, baseY: B.y - cfg.lift, baseX: B.x + 120, cfg,
+      const L = this.L, B = L.boss, cfg = BOSSES[L.def.boss], R = RIGS[cfg.rig];
+      const e = this.addEnemy('boss', B.x + 120, B.y - R.stand, { intro: true, introT: 0, phase: 1, atk: null, atkT: 0,
+        step: 0, rear: 0, recoil: 0,
+        cd: 3.5, baseY: B.y - R.stand, baseX: B.x + 120, cfg, R,
         hp: this.opts.weak || cfg.hp, maxHp: this.opts.weak || cfg.hp });
-      // Trefferzone (Körper), Kern (mehr Schaden), Kanone und Auge relativ zur Mitte
-      Object.assign(e, { body: cfg.body, core: cfg.core, cannon: cfg.cannon, eye: cfg.eye });
+      // Trefferzone (Körper), Kern (mehr Schaden) und Auge relativ zur Hüfte; der Boss schaut nach links
+      Object.assign(e, { body: R.body, core: { x: -R.core.x, y: R.core.y, r: R.core.r }, eye: { x: -R.eye.x, y: R.eye.y },
+        cannon: { x: -R.shoulder.x, y: R.shoulder.y } });
+      // Skelett: Hüfte, Beine mit Schrittzyklus, Arme zum Zielen und Schlagen
+      e.rig = { hipX: e.x, hipY: e.y, lean: 0, aim: 0, claw: 0.75, tail: 0, fall: 0, walk: 0, dir: 1,
+        feet: [{ x: 90, y: R.stand }, { x: -90, y: R.stand }] };
       this.boss = e;
       this.lock = true;
       this.audio.bossAlarm();
@@ -960,13 +1079,105 @@
       this.pending.push({ t: 1.5, fn: () => { this.audio.bossRoar(); this.shake = 1; this.rumble(1, 1, 1200); } });
     }
 
+    // Der zusammengesetzte Boss: gehen mit Schrittzyklus, zielen, ausholen, zusammenbrechen
+    animateRig(e, dt) {
+      const R = e.R, r = e.rig, p = this.player, A = this.L.arena;
+      const fy = this.L.ph - 3 * 64, face = -1;
+      e.rear = Math.max(0, e.rear - dt * 2.5);
+      e.recoil *= Math.pow(0.0015, dt);
+      if (e.dying) {                                    // bricht in die Knie und kippt nach vorn
+        r.fall = Math.min(1, r.fall + dt * 0.8);
+        r.hipY = lerp(r.hipY, fy - 90, 1 - Math.pow(0.25, dt));
+        r.lean = lerp(r.lean, -0.5, 1 - Math.pow(0.3, dt));
+        r.claw = lerp(r.claw, 1.5, 1 - Math.pow(0.4, dt));
+        r.aim = lerp(r.aim, 1.2, 1 - Math.pow(0.4, dt));
+        r.feet[0].x = lerp(r.feet[0].x, 210, 1 - Math.pow(0.4, dt));
+        r.feet[1].x = lerp(r.feet[1].x, -180, 1 - Math.pow(0.4, dt));
+        r.feet[0].y = r.feet[1].y = fy - r.hipY;
+        r.tail = lerp(r.tail, -0.5, 1 - Math.pow(0.4, dt));
+        e.x = r.hipX;
+        e.y = r.hipY;
+        return;
+      }
+      // Gehen: er hält Abstand zum Helden und bleibt in seiner Hälfte der Arena
+      const want = clamp(p.x + 760, A.x + 980, e.baseX + 150);
+      const busy = e.atk === 'slam' || e.atk === 'rings' || e.rear > 0.2;
+      const speed = busy ? 0 : clamp((want - r.hipX) * 1.4, -190, 190);
+      r.hipX += speed * dt;
+      if (Math.abs(speed) > 20) r.dir = Math.sign(speed) * face;     // lokale Laufrichtung
+      // Schrittzyklus läuft mit der zurückgelegten Strecke, im Stand wippt er nur
+      const moving = Math.abs(speed) > 20;
+      const prev = r.walk;
+      r.walk += (moving ? Math.abs(speed) * dt / R.step : dt * 0.22);
+      const half = Math.floor(r.walk * 2) !== Math.floor(prev * 2);
+      for (let i = 0; i < 2; i++) {
+        const ph = ((r.walk + i * 0.5) % 1 + 1) % 1;
+        const foot = r.feet[i];
+        if (!moving) {                                  // Stand: Füße bleiben stehen, leichtes Wippen
+          foot.x = lerp(foot.x, i ? -100 : 110, 1 - Math.pow(0.02, dt));
+          foot.y = fy - r.hipY;
+        } else if (ph < 0.62) {                         // Standbein: schiebt den Körper
+          foot.x = (0.5 - ph / 0.62) * R.step * r.dir;
+          foot.y = fy - r.hipY;
+        } else {                                        // Schwungbein: hebt ab und setzt vorn auf
+          const u = (ph - 0.62) / 0.38;
+          foot.x = (-0.5 + u) * R.step * r.dir;
+          foot.y = fy - r.hipY - Math.sin(u * Math.PI) * R.lift;
+        }
+      }
+      if (half && moving) this.bossFootfall(e, r.hipX + r.feet[Math.floor(r.walk * 2) % 2].x * face);
+      // Hüfte: federt im Schritt, hebt sich beim Ausholen, sackt beim Stampfen
+      const bob = moving ? -Math.abs(Math.sin(r.walk * TAU)) * 14 : Math.sin(this.time * 1.6) * 5;
+      const target = fy - R.stand + bob - e.rear * 60 + (e.slamDrop || 0);
+      r.hipY = lerp(r.hipY, target, 1 - Math.pow(0.0005, dt));
+      e.slamDrop = (e.slamDrop || 0) * Math.pow(0.02, dt);
+      r.lean = lerp(r.lean, -e.rear * 0.22 + e.recoil * 0.12 + (moving ? 0.05 : 0), 1 - Math.pow(0.01, dt));
+      // Vorderer Arm: die Kanone zielt auf den Helden, die Sichelklaue holt aus und schlägt
+      const sx = r.hipX + R.shoulder.x * face, sy = r.hipY + R.shoulder.y;
+      let aimT;
+      if (R.aim === 'arm') {
+        aimT = clamp(Math.atan2(p.y - 40 - sy, (p.x - sx) * face), -1.1, 0.95);
+      } else {
+        aimT = 0.55 + Math.sin(this.time * 1.1) * 0.15;          // Klaue wiegt sich
+        if (e.atk === 'spread' || e.atk === 'acid') aimT = -0.5;  // aufgerissen beim Speien
+        if (e.atk === 'brood') aimT = 1.3;                        // gräbt am Boden
+        if (e.atk === 'slam') aimT = e.atkT < 0.9 ? -1.3 : 1.4;   // Sichelschlag
+      }
+      const snap = (e.atk === 'slam' && e.atkT >= 0.9) ? 1e-9 : (R.aim === 'arm' ? 0.002 : 0.01);
+      r.aim = lerp(r.aim, aimT, 1 - Math.pow(snap, dt));
+      // Zweiter Arm: hängt, holt beim Schlag aus und drischt zu
+      let clawT = 0.75 + Math.sin(this.time * 1.3 + 1) * 0.12;
+      if (e.atk === 'slam') clawT = e.atkT < 0.9 ? -1.25 : 1.35;
+      else if (e.atk === 'brood') clawT = 1.2;
+      else if (e.rear > 0.2) clawT = -0.6;
+      r.claw = lerp(r.claw, clawT, 1 - Math.pow(e.atk === 'slam' && e.atkT >= 0.9 ? 1e-9 : 0.004, dt));
+      // Schwanz schwingt gegen die Laufrichtung aus
+      if (R.tail) r.tail = lerp(r.tail, Math.sin(this.time * 1.5) * 0.18 - (moving ? 0.25 : 0) - e.rear * 0.3,
+        1 - Math.pow(0.02, dt));
+      e.x = r.hipX;
+      e.y = r.hipY;
+    }
+
+    bossFootfall(e, at) {
+      const fy = this.L.ph - 3 * 64;
+      const x = at ?? e.x + rnd(-120, 120);
+      this.dust(x, fy, 8);
+      this.debris(x, fy, 2, 'rock');
+      this.shake = Math.max(this.shake, 0.18);
+      this.audio.thud();
+      if (Math.abs(this.player.x - x) < 260) this.rumble(0.25, 0.15, 90);
+    }
+
     updateBoss(e, dt) {
       const p = this.player, A = this.L.arena, cfg = e.cfg, col = cfg.color;
+      this.updateBossHits(e, dt);
+      this.animateRig(e, dt);
       if (!e.dying) p.x = Math.min(p.x, e.baseX + e.body.x0 + 60 - p.w / 2);
       if (e.intro) {
         e.introT += dt;
         const k = clamp((e.introT - 0.8) / 2.4, 0, 1);
         e.y = e.baseY + (1 - easeOut(k)) * 760;
+        if (e.rig) { e.rig.hipY = e.y; e.rig.hipX = e.x; e.rig.feet.forEach((f, i) => { f.y = e.R.stand; f.x = i ? -100 : 110; }); }
         if (e.introT > 0.8 && e.introT < 3.2) {
           this.shake = Math.max(this.shake, 0.4);
           if (Math.random() < 0.5) this.debris(e.x + rnd(-250, 250), this.L.ph - 3 * 64, 1, 'rock');
@@ -988,14 +1199,15 @@
         this.shake = 0.9;
         this.flash = 0.5; this.flashColor = col;
         this.say(phase === 2 ? 'PHASE 2' : 'FINAL PHASE', col, 1.6);
+        e.rear = 1.4;
         e.cd = 1.2; e.atk = null;
         if (this.bossBeam) { this.bossBeam = null; this.audio.laser(false); }
         for (const o of this.ebullets) o.life = Math.min(o.life, 0.3);
       }
-      e.x = e.baseX + Math.sin(this.time * 0.7) * 40;
-      e.y = e.baseY + Math.sin(this.time * 1.4) * 14;
       e.face = -1;
-      const cx = e.x + e.cannon.x, cy = e.y + e.cannon.y, ex = e.x + e.eye.x, ey = e.y + e.eye.y;
+      const m = this.bossMuzzle(e);                  // Mündung: Kanonenlauf oder Maul
+      const cx = m.x, cy = m.y;
+      const ex = e.x + e.eye.x, ey = e.y + e.eye.y;
       const kx = e.x + e.core.x, ky = e.y + e.core.y;
       const fy = this.L.ph - 3 * 64;
       const speedUp = (phase === 3 ? 0.7 : phase === 2 ? 0.85 : 1) * (cfg.rage ? 0.85 : 1);
@@ -1008,6 +1220,7 @@
         if ((a === 'drones' || a === 'bats' || a === 'brood') && minions > 4) a = pool.includes('spread') ? 'spread' : 'acid';
         e.atk = a; e.last = a; e.atkT = 0; e.n = 0;
         if (a === 'slam' || a === 'rings' || a === 'beam') this.audio.charge(0.8);
+        if (a === 'slam' || a === 'drones' || a === 'bats' || a === 'brood') e.rear = 1;   // holt aus
       }
       e.atkT += dt;
       const t = e.atkT;
@@ -1019,6 +1232,7 @@
             const k = phase === 3 ? 4 : 3;
             for (let i = -k; i <= k; i++) this.enemyShoot(cx, cy, a + i * 0.13, 480 + phase * 40, 'orb', col);
             this.part({ x: cx, y: cy, life: 0.12, size: 180, color: col, kind: 'flash' });
+            e.recoil = 1;
             this.shake = Math.max(this.shake, 0.3);
           }
           if (t > 3.2) this.endAttack(e, 1.3 * speedUp);
@@ -1029,12 +1243,14 @@
             const a = Math.atan2(p.y - ey, p.x - ex) + rnd(-0.08, 0.08);
             this.enemyShoot(ex, ey, a, 700, 'big', '#ff5a5a');
             this.part({ x: ex, y: ey, life: 0.08, size: 130, color: '#ff5a5a', kind: 'flash' });
+            e.recoil = Math.min(1, e.recoil + 0.5);
           }
           if (t > 3) this.endAttack(e, 1.2 * speedUp);
           break;
         case 'slam':
           if (e.n === 0 && t > 0.9) {
             e.n = 1;
+            e.rear = 0; e.slamDrop = 90;                       // stampft in den Boden
             this.audio.slam();
             this.shake = 1; this.rumble(1, 1, 400);
             this.waves.push({ x: e.x - 200, y: fy, dir: -1, speed: 760, h: 80, life: 3, color: col });
@@ -1131,6 +1347,15 @@
         this.hurtPlayer(EN.boss.dmg, -1);
         if (!p.dead) p.vx = -900;
       }
+    }
+
+    // Weltposition der Kanonenmündung am gezielten Arm
+    bossMuzzle(e) {
+      const R = e.R, r = e.rig, face = -1;
+      if (R.aim === 'head') return { x: r.hipX + R.mouth.x * face, y: r.hipY + R.mouth.y };
+      const sx = r.hipX + R.shoulder.x * face, sy = r.hipY + R.shoulder.y;
+      const len = R.armLen - e.recoil * 40;
+      return { x: sx + Math.cos(r.aim) * len * face, y: sy + Math.sin(r.aim) * len };
     }
 
     endAttack(e, cd) { e.atk = null; e.cd = cd; e.vt = 0; }
@@ -1430,7 +1655,7 @@
       this.audio.pickup(k.type);
       this.burst(k.x, k.y, 20, { color: '#fff2a0', speed: 400, life: 0.5, size: 3 });
       this.ring(k.x, k.y, 120, '#fff2a0');
-      if (k.type === 'H') { p.hp = Math.min(P.hp, p.hp + 40); this.float(p.x, p.y - 110, '+40 HP', '#6aff8a'); }
+      if (k.type === 'H') { p.hp = Math.min(P.hp, p.hp + 50); this.float(p.x, p.y - 110, '+50 HP', '#6aff8a'); }
       else if (k.type === 'G') { p.grenades = Math.min(9, p.grenades + 3); this.float(p.x, p.y - 110, '+3 GRENADES', '#ffd24a'); }
       else {
         const w = PICK_WEAPON[k.type];
@@ -1520,5 +1745,5 @@
   }
 
   window.Game = Game;
-  window.GameDefs = { P, WEAPONS, ORDER, EN, BOSSES, W, H };
+  window.GameDefs = { P, WEAPONS, ORDER, EN, BOSSES, RIGS, W, H };
 })();

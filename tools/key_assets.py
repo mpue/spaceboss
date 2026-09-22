@@ -26,7 +26,6 @@ SPRITES = {
     "turret": ("turret_11", 260, 260),
     "brute": ("brute_11", 520, 360),
     "pod": ("pod_11", 280, 280),
-    "boss": ("boss_11", 1100, 1100),
     "crate": ("crate_23", 160, 160),
     "barrel": ("barrel_23", 160, 160),
     "capsule": ("capsule_11", 160, 160),
@@ -40,7 +39,16 @@ SPRITES = {
     "bat": ("bat_11", 300, 200),
     "saucer": ("saucer_11", 300, 200),
     "sentinel": ("sentinel_11", 260, 300),
-    "queen": ("queen_23", 1100, 1100),
+    # Spaceboss in Einzelteilen (wird im Spiel zusammengesetzt und animiert)
+    "boss_torso": ("boss_torso_23", 700, 700),
+    "boss_cannon": ("boss_cannon_23", 900, 450),
+    "boss_claw": ("boss_claw_11", 900, 450),
+    "boss_leg": ("boss_leg_11", 380, 760),
+    # Hive Queen in Einzelteilen
+    "queen_torso": ("queen_torso_23", 700, 700),
+    "queen_scythe": ("queen_scythe_23", 900, 450),
+    "queen_leg": ("queen_leg_37", 380, 760),
+    "queen_tail": ("queen_tail_23", 900, 450),
     "fungi": ("fungi_11", 1536, 640),
     "machinery": ("machinery_11", 1536, 640),
 }

@@ -348,6 +348,24 @@
     squish() {
       if (this.ctx) this._noise(0.25, 500, 0.3, undefined, 'bandpass', 3, 150);
     }
+    // Treffer am Boss: harter Panzer-Schlag, am Kern heller und mit Ton
+    // schwerer Schritt des Bosses
+    thud() {
+      if (!this.ctx || !this._gate('thud', 0.12)) return;
+      const t = this.ctx.currentTime;
+      this._tone(64, 0.26, 'sine', 0.42, t, 30);
+      this._noise(0.16, 260, 0.22, t, 'lowpass', 0.9, 70);
+      this.duck(0.12, 0.2);
+    }
+
+    bossHit(crit) {
+      if (!this.ctx || !this._gate(crit ? 'bhc' : 'bh', crit ? 0.05 : 0.045)) return;
+      const t = this.ctx.currentTime;
+      this._noise(0.09, crit ? 3600 : 2200, crit ? 0.3 : 0.2, t, 'bandpass', crit ? 2 : 3, 700);
+      this._tone(crit ? 320 : 180, 0.1, 'square', crit ? 0.09 : 0.06, t, 90);
+      if (crit) this._tone(1400, 0.07, 'triangle', 0.07, t, 2400);
+    }
+
     bossRoar() {
       if (!this.ctx) return;
       const t = this.ctx.currentTime;

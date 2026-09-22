@@ -68,6 +68,9 @@ K springt, J feuert, L dasht. Das Spiel schaltet automatisch um, sobald die Maus
 - **Waffen:** Plasma-Blaster (unendlich), Spread Cannon (7er-Fächer), Ion Laser (Dauerstrahl, durchschlägt
   alles), Swarm Rockets (zielsuchend, Flächenschaden). Munition aus Kapseln **S / L / R**, leer geht es zurück
   zum Blaster. Dazu Granaten (**G**), die abprallen und auf Kontakt oder nach der Zündzeit hochgehen.
+- **Warmlaufen:** Die erste Minute von Level 1 ist gnädiger. Gegner feuern seltener, ihre Geschosse sind
+  langsamer und machen bis zu 35 % weniger Schaden, Krabbler springen noch nicht, und die Drohnenwellen
+  setzen erst nach gut einer halben Minute ein. Das läuft linear aus (`this.ease` in `game.js`).
 - **Kette:** Abschüsse innerhalb von 2,5 s bauen eine Kette auf, alle 5 Treffer steigt der Multiplikator (bis ×8).
 - **Checkpoints:** Baken, die beim Vorbeilaufen grün werden, heilen etwas und sind der Wiedereinstieg.
 - **Fässer** explodieren in Ketten und reißen Gegner (und den Helden) mit, **Kisten** geben Beute.
@@ -97,12 +100,35 @@ Alle Bosse haben drei Phasen und einen Kern, der 60 % mehr Schaden nimmt:
 | **Hive Queen** | Säureregen über die ganze Arena, Fächer, frisch gelegte Krabbler, Fledermausschwärme, Schockwellen, Ringsalven |
 | **Endform** | alles davon, schneller, dazu ein waagrechter Laser: tief heißt drüberspringen, hoch heißt ducken (die Warnung sagt an, was) |
 
+**Beide Bosse sind wie der Held aus Einzelteilen zusammengesetzt** und haben ein echtes Skelett: Die Hüfte
+ist der Nullpunkt, beide Beine werden am Knie geteilt und über Zwei-Knochen-IK auf ihre Fußpunkte gerechnet
+(umgekehrtes Knie), die Arme drehen sich um die Schulter. Sie **laufen** dem Helden mit einem Schrittzyklus
+entgegen: Standbein schiebt, Schwungbein hebt ab, bei jedem Aufsetzen staubt es, die Kamera wackelt und ein
+tiefer Tritt dröhnt. Dazu federt die Hüfte, sie bäumen sich vor Schlägen und beim Phasenwechsel auf, zucken
+beim Feuern zurück und brechen im Tod in die Knie.
+
+| Boss | Teile | Besonderheit |
+|---|---|---|
+| **Spaceboss** (auch die Endform) | `boss_torso`, `boss_cannon`, `boss_claw`, `boss_leg` | der Kanonenarm zielt auf den Helden, die Mündung sitzt am Ende des Laufs; der Klauenarm holt aus und drischt beim Schlag zu |
+| **Hive Queen** | `queen_torso`, `queen_scythe`, `queen_leg`, `queen_tail` | zwei Sichelklauen (eine hinter, eine vor dem Körper), die Säure kommt aus dem Maul, der Schwanz schwingt gegen die Laufrichtung aus |
+
+Die Maße der Skelette stehen in `RIGS` in `game.js`, die Ansatzpunkte in den Bildern (Hüfte, Knie, Knöchel,
+Schulter, Mündung) in `BOSS` in `render.js`. Ein neuer Boss braucht nur einen Eintrag in beiden.
+
+Jeder Treffer auf einen Boss zeigt sich deutlich: Der Körper blitzt weiß auf und zuckt in Schussrichtung
+zurück, am Einschlag sprühen Funken, der aufgelaufene Schaden erscheint als Zahl, und die Bossleiste blitzt,
+zittert und lässt den frischen Schaden als weißen Rest nachlaufen. Treffer in den Kern machen 60 % mehr
+Schaden, werden golden dargestellt und mit „CRIT!“ beschriftet.
+
 ## Test-Schalter
 
-`?play=1` (Titel überspringen), `?level=2` (Level wählen), `?god=1` (unverwundbar), `?weak=1` (Boss mit
+`?play=1` (Titel überspringen), `?level=2` (Level wählen), `?zoom=1.1&on=boss` (Kamera auf den Boss), `?god=1` (unverwundbar), `?weak=1` (Boss mit
 400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?zoom=3` (Kamera um den Helden vergrößern,
 zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 356, 231 und 235.
 Zum Beispiel <http://localhost:5190/?play=1&god=1&level=3&at=232> für das Finale.
+
+Im laufenden Spiel liegt der Spielzustand als `window.SB` in der Konsole (`SB.player.hp`, `SB.boss.hp`,
+`SB.ease` …), praktisch zum Nachjustieren. `window.game` ist dagegen das Canvas-Element.
 
 `node tools/check_levels.js` prüft die Level auf Bau-Fehler: Abschnitte mit zu vielen Zeilen, Gegner oder
 Checkpoints ohne Boden unter sich, Deckentürme ohne Decke, Lasertore ohne Decke, fehlende Arena.
@@ -123,10 +149,15 @@ Welche Variante genommen wird, steht oben in `tools/key_assets.py`. Sprites werd
 und freigestellt, Explosionen auf Schwarz (additiv gezeichnet), Boden- und Metalltextur werden gespiegelt zu
 nahtlosen Kacheln.
 
-**Der Held** ist aus drei Renders zusammengesetzt und wird prozedural animiert: Oberkörper (mit Armstumpf),
+**Held und Spaceboss** sind aus einzeln gerenderten Teilen zusammengesetzt und werden prozedural animiert,
+nicht als fertige Animation gerendert.
+
+**Der Held** ist aus drei Renders zusammengesetzt: Oberkörper (mit Armstumpf),
 Waffenarm (dreht sich um die Schulter zum Ziel) und ein Bein, das am Knie geteilt wird (Oberschenkel und
 Unterschenkel mit Gelenk). Lauf-, Sprung-, Schwebe- und Duckposen, Rückstoß, Landestauchung und Dash-Nachbilder
-entstehen im Code. Die Ansatzpunkte (Armstumpf, Hüfte, Schulter, Mündung, Knie) stehen in `HERO` in `render.js`.
+entstehen im Code. **Beim Sterben** fällt er richtig um: Er wird zurückgeschleudert, taumelt, prallt einmal auf,
+kippt um den Fußpunkt in die Seitenlage, rutscht aus und bleibt rauchend und funkend liegen — der Arm hängt
+herab, die Beine sacken zusammen. Die Ansatzpunkte (Armstumpf, Hüfte, Schulter, Mündung, Knie) stehen in `HERO` in `render.js`.
 Die Beine der Krabbler werden ebenfalls prozedural gezeichnet.
 
 ## Sounds
