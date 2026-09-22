@@ -1,0 +1,12 @@
+services:
+  spaceboss:
+    build: .
+    image: spaceboss:latest
+    container_name: spaceboss
+    ports:
+      - "${SPACEBOSS_PORT:-5190}:5190"
+    volumes:
+      # Songs (.mp3/.ogg/.wav/.m4a/.flac)
+      - "${MUSIC_PATH:-./music}:/music:ro"
+    restart: unless-stopped
+    init: true

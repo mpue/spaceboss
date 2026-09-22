@@ -1,0 +1,12 @@
+{
+  "name": "spaceboss",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Run-and-Gun Jump'n'Run im Browser: ein muskulöser Astronaut gegen eine Alien-Invasion",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
