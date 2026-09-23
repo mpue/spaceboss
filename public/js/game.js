@@ -1135,7 +1135,7 @@
         }
         case 'stingfly': {
           // schwirrt umher und sticht im Sturzflug zu
-          e.state = e.state || 'fly';
+          if (e.state === 'idle') { e.state = 'fly'; e.diveT = 0; }
           if (e.state === 'fly') {
             const tx = p.x + Math.sin(e.t * 2.3) * 320, ty = p.y - 260 + Math.sin(e.t * 3.7) * 90;
             e.vx += clamp(tx - e.x, -400, 400) * 5 * dt; e.vy += clamp(ty - e.y, -400, 400) * 5 * dt;
@@ -1146,7 +1146,7 @@
               e.vx = Math.cos(a) * 1050; e.vy = Math.sin(a) * 1050;
             }
           } else {
-            e.diveT += dt;
+            e.diveT = (e.diveT || 0) + dt;
             if (e.diveT > 0.55 || this.solidAt(e.x, e.y + 30)) { e.state = 'fly'; e.cd = rnd(1.2, 2); e.vy = -400; }
           }
           e.x += e.vx * dt; e.y += e.vy * dt;
