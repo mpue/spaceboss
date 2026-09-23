@@ -2155,7 +2155,9 @@
           let best = null, bd = 1e9;
           for (const e of this.enemies) {
             if (e.dead || e.intro) continue;
-            const ex = e.type === 'boss' ? e.x + e.core.x : e.x, ey = e.type === 'boss' ? e.y + e.core.y : e.y;
+            // Bosse werden auf ihre Schwachstelle angepeilt (Kern, Schlund, Eiersack), sonst auf die Mitte
+            const w = e.type === 'boss' && e.throat ? e.throat : e;
+            const ex = w.x, ey = w.y;
             const d = Math.hypot(ex - b.x, ey - b.y);
             if (d < bd && d < 1200) { bd = d; best = { x: ex, y: ey }; }
           }
