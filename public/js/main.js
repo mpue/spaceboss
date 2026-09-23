@@ -21,8 +21,6 @@
   const mouse = { x: W / 2, y: H / 2, down: false, right: false, moved: -99 };
   let device = 'keyboard';
   let lastMouseUse = -99;
-  let padIndex = null;
-  const padPrev = {};
 
   const KEYMAP = {
     jump: ['Space', 'KeyK', 'KeyW', 'ArrowUp'],
@@ -73,70 +71,145 @@
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('wheel', e => { if (e.deltaY > 0) pressed.next = true; else if (e.deltaY < 0) pressed.prev = true; e.preventDefault(); }, { passive: false });
 
-  addEventListener('gamepadconnected', e => { if (padIndex === null) padIndex = e.gamepad.index; });
-  addEventListener('gamepaddisconnected', e => { if (e.gamepad.index === padIndex) padIndex = null; });
+  // ---------- Gamepad ----------
+  //
+  // Layout (XInput / DualShock):
+  //   linker Stick, D-Pad   laufen (analog)        rechter Stick   zielen (360°)
+  //   A (✕)                 springen, bestätigen   B (○)           Dash, zurück
+  //   X (□)                 feuern                 Y (△)           nächste Waffe
+  //   RT (R2)               feuern                 LT (L2)         Dash
+  //   RB (R1)               Granate                LB (L1)         vorige Waffe
+  //   Start / Back          Pause
+  //
+  // Pads ohne "standard"-Mapping werden nach denselben Indizes gelesen; melden sie keine
+  // Trigger-Tasten, kommen LT/RT aus den Achsen 4 und 5.
+  const DEAD = 0.22, TRIG = 0.3;
+  const PAD = { index: null, id: '', prev: {}, note: null, noteT: 0, connected: false };
+
+  // Radiale Totzone: kleine Auslenkungen fallen weg, der Rest wird wieder auf 0..1 gestreckt
+  function stick(x, y) {
+    const m2 = Math.hypot(x, y);
+    if (m2 < DEAD) return { x: 0, y: 0, m: 0 };
+    const k = (m2 - DEAD) / (1 - DEAD) / m2;
+    return { x: x * k, y: y * k, m: Math.min(1, (m2 - DEAD) / (1 - DEAD)) };
+  }
+
+  function allPads() {
+    return navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+  }
+
+  addEventListener('gamepadconnected', e => {
+    PAD.index = e.gamepad.index; PAD.id = e.gamepad.id; PAD.connected = true;
+    note('GAMEPAD CONNECTED', short(e.gamepad.id));
+  });
+  addEventListener('gamepaddisconnected', e => {
+    if (e.gamepad.index !== PAD.index) return;
+    PAD.index = null; PAD.connected = false;
+    note('GAMEPAD DISCONNECTED', 'PAUSED');
+    if (mode === 'play') { mode = 'pause'; audio.muffle(true); audio.laser(false); }
+  });
+  const short = id => String(id).replace(/\s*\([^)]*\)\s*/g, ' ').trim().slice(0, 28).toUpperCase();
+  function note(text, sub) { PAD.note = { text, sub }; PAD.noteT = 3; }
 
   function readPad() {
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-    // aktiv ist das Pad, auf dem zuletzt gedrückt wurde
-    for (const p of pads) if (p && p.buttons.some(b => b.pressed)) padIndex = p.index;
-    const p = padIndex !== null ? pads[padIndex] : null;
-    if (!p) return null;
-    const bt = i => !!(p.buttons[i] && p.buttons[i].pressed);
-    const dz = v => Math.abs(v) < 0.25 ? 0 : v;
-    const s = {
-      lx: dz(p.axes[0] || 0), ly: dz(p.axes[1] || 0), rx: dz(p.axes[2] || 0), ry: dz(p.axes[3] || 0),
-      a: bt(0), b: bt(1), x: bt(2), y: bt(3), lb: bt(4), rb: bt(5), lt: bt(6), rt: bt(7), start: bt(9), back: bt(8),
-      up: bt(12), down: bt(13), left: bt(14), right: bt(15),
+    const list = allPads();
+    if (!list.length) { PAD.index = null; PAD.connected = false; return null; }
+    PAD.connected = true;
+    // Aktiv ist das Pad, an dem zuletzt etwas bewegt oder gedrückt wurde
+    for (const p of list) {
+      const busy = p.buttons.some(b => b.pressed || b.value > TRIG) ||
+        p.axes.some((v, i) => i < 4 && Math.abs(v) > 0.5);
+      if (busy) { PAD.index = p.index; PAD.id = p.id; }
+    }
+    const p = list.find(x => x.index === PAD.index) || list[0];
+    PAD.index = p.index;
+    const bt = i => p.buttons[i] || { pressed: false, value: 0 };
+    const ax = i => p.axes[i] || 0;
+    // Trigger: bevorzugt als Taste mit Analogwert, sonst aus den Achsen (nur wenn es die Tasten nicht gibt)
+    const trig = (i, axis) => {
+      if (p.buttons.length > i) { const b = bt(i); return b.pressed ? Math.max(b.value, 1) : b.value; }
+      return p.axes.length > axis ? (ax(axis) + 1) / 2 : 0;
     };
-    const edge = k => s[k] && !padPrev[k];
-    const out = { s, edge };
-    if (Object.values(s).some(v => v === true) || Math.hypot(s.lx, s.ly, s.rx, s.ry) > 0.4) device = 'gamepad';
-    for (const k of Object.keys(s)) padPrev[k] = s[k];
-    return out;
+    const s = {
+      ls: stick(ax(0), ax(1)), rs: stick(ax(2), ax(3)),
+      lt: trig(6, 4), rt: trig(7, 5),
+      a: bt(0).pressed, b: bt(1).pressed, x: bt(2).pressed, y: bt(3).pressed,
+      lb: bt(4).pressed, rb: bt(5).pressed, back: bt(8).pressed, start: bt(9).pressed,
+      up: bt(12).pressed, down: bt(13).pressed, left: bt(14).pressed, right: bt(15).pressed,
+    };
+    // Aktionen unabhängig davon, ob Taste oder Trigger benutzt wird
+    s.fire = s.rt > TRIG || s.x;
+    s.dash = s.lt > TRIG || s.b;
+    s.jump = s.a;
+    s.grenade = s.rb;
+    s.nextW = s.y;
+    s.prevW = s.lb;
+    s.menu = s.start || s.back;
+    if (Object.entries(s).some(([k, v]) => v === true && k !== 'menu') || s.ls.m > 0.4 || s.rs.m > 0.4 ||
+        s.lt > TRIG || s.rt > TRIG) device = 'gamepad';
+    // Flanke: gegen den Zustand des vorigen Frames prüfen, erst danach merken
+    const prev = PAD.prev;
+    const now = {};
+    for (const k of Object.keys(s)) now[k] = s[k] === true;
+    PAD.prev = now;
+    const edge = k => now[k] && !prev[k];
+    return { s, edge, id: p.id, raw: p };
   }
 
   function rumble(strong, weak, ms) {
-    if (device !== 'gamepad' || padIndex === null) return;
-    const p = navigator.getGamepads()[padIndex];
-    const va = p && p.vibrationActuator;
-    if (va && va.playEffect) va.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch(() => {});
+    if (device !== 'gamepad' || PAD.index === null) return;
+    const p = allPads().find(x => x.index === PAD.index);
+    const va = p && (p.vibrationActuator || (p.hapticActuators && p.hapticActuators[0]));
+    if (!va) return;
+    if (va.playEffect) va.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch(() => {});
+    else if (va.pulse) va.pulse(Math.max(strong, weak), ms);
   }
 
-  function buildInput() {
+  function buildInput(dt) {
     const pad = readPad();
     const ps = pad && pad.s;
     const now = performance.now() / 1000;
+    if (PAD.noteT > 0) PAD.noteT -= dt;
+    // Laufen: Tastatur digital, Stick und D-Pad analog
+    let moveX = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
+    if (ps) {
+      moveX += ps.ls.x + (ps.right ? 1 : 0) - (ps.left ? 1 : 0);
+      moveX = Math.max(-1, Math.min(1, moveX));
+    }
+    const stickAim = ps && ps.rs.m > 0.35;
     const inp = {
-      left: keys.has('KeyA') || keys.has('ArrowLeft') || (ps && (ps.lx < -0.3 || ps.left)),
-      right: keys.has('KeyD') || keys.has('ArrowRight') || (ps && (ps.lx > 0.3 || ps.right)),
-      up: keys.has('ArrowUp') || (ps && (ps.ly < -0.5 || ps.up)),
-      down: keys.has('KeyS') || keys.has('ArrowDown') || (ps && (ps.ly > 0.6 || ps.down)),
-      jump: held('jump') || (ps && ps.a),
-      fire: held('fire') || mouse.down || (ps && (ps.rt || ps.x)),
+      moveX,
+      left: moveX < -0.25, right: moveX > 0.25,
+      up: keys.has('ArrowUp') || (ps && !stickAim && (ps.ls.y < -0.55 || ps.up)),
+      down: keys.has('KeyS') || keys.has('ArrowDown') || (ps && (ps.ls.y > 0.6 || ps.down)),
+      jump: held('jump') || (ps && ps.jump),
+      fire: held('fire') || mouse.down || (ps && ps.fire),
       pressed: Object.assign({}, pressed),
     };
-    // W springt nur, wenn mit der Maus gezielt wird; sonst zielt Pfeil-hoch nach oben
     if (ps) {
-      if (pad.edge('a')) inp.pressed.jump = true;
-      if (pad.edge('lt') || pad.edge('b')) inp.pressed.dash = true;
-      if (pad.edge('rb')) inp.pressed.grenade = true;
-      if (pad.edge('lb') || pad.edge('y')) inp.pressed.next = true;
+      if (pad.edge('jump')) inp.pressed.jump = true;
+      if (pad.edge('dash')) inp.pressed.dash = true;
+      if (pad.edge('grenade')) inp.pressed.grenade = true;
+      if (pad.edge('nextW')) inp.pressed.next = true;
+      if (pad.edge('prevW')) inp.pressed.prev = true;
       if (pad.edge('start') || pad.edge('back')) inp.pressed.pause = true;
-      if (pad.edge('a') || pad.edge('start')) inp.pressed.ok = true;
-      if (Math.hypot(ps.rx, ps.ry) > 0.35) inp.aimVec = { x: ps.rx, y: ps.ry };
+      if (pad.edge('jump') || pad.edge('start')) inp.pressed.ok = true;
+      if (stickAim) inp.aimVec = { x: ps.rs.x, y: ps.rs.y };
+      // rechter Stick losgelassen: die zuletzt gezielte Richtung bleibt stehen
+      else if (device === 'gamepad' && !inp.up && !(inp.down && !inp.left && !inp.right)) inp.aimHold = true;
     }
     const mouseAim = device === 'keyboard' && now - lastMouseUse < 4;
     if (mouseAim && !inp.aimVec) inp.aimPoint = { x: mouse.x, y: mouse.y };
-    if (mouseAim) inp.up = false;                 // mit Maus: W = springen, nicht zielen
-    if (!mouseAim && (keys.has('KeyW') || keys.has('ArrowUp')) && !keys.has('Space') && !keys.has('KeyK')) {
+    if (mouseAim) { inp.up = false; inp.aimHold = false; }
+    if (!mouseAim && device === 'keyboard' && (keys.has('KeyW') || keys.has('ArrowUp')) && !keys.has('Space') && !keys.has('KeyK')) {
       // Tastatur ohne Maus: hoch zielt, gesprungen wird mit Leertaste/K
-      inp.jump = keys.has('Space') || keys.has('KeyK') || (ps && ps.a);
+      inp.jump = keys.has('Space') || keys.has('KeyK');
       if (pressed.jump && !(keys.has('Space') || keys.has('KeyK'))) inp.pressed.jump = false;
     }
     if (pressed.click) inp.pressed.ok = true;
     for (const k of Object.keys(pressed)) delete pressed[k];
     inp.mouseAim = mouseAim;
+    inp.pad = ps || null;
     return inp;
   }
 
@@ -223,6 +296,17 @@
 
   // ---------- Schleife ----------
 
+  // Fadenkreuz: bei Maus dort, wo die Maus ist, mit Stick in Zielrichtung vor dem Helden
+  function crosshair(inp, g) {
+    const p = g.player;
+    if (p.dead) return null;
+    if (inp.mouseAim) return { x: mouse.x, y: mouse.y };
+    if (device !== 'gamepad') return null;
+    const d = 260;
+    return { x: p.x + Math.cos(p.aim) * d - g.cam.x, y: p.y + Math.sin(p.aim) * d - g.cam.y, soft: true };
+  }
+
+  const padDebug = params.get('pad') === '1';
   let last = performance.now(), titleT = 0, fpsAcc = 0, fpsN = 0;
   const startLevel = Math.max(0, Math.min(Level.LEVELS.length - 1, (Number(params.get('level')) || 1) - 1));
   function frame(now) {
@@ -230,11 +314,12 @@
     last = now;
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 0.5) { fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
-    const inp = buildInput();
+    const inp = buildInput(dt);
     const loading = loaded < total ? loaded / total : 0;
     if (mode === 'title') {
       titleT += dt;
-      if (renderer) renderer.draw(null, { time: titleT, loading, device });
+      if (renderer) renderer.draw(null, { time: titleT, loading, device, note: PAD.noteT > 0 ? PAD.note : null,
+        pad: padDebug ? inp.pad : null });
       if (!loading && (inp.pressed.ok || inp.pressed.jump)) startGame(startLevel);
     } else {
       if (inp.pressed.pause && (mode === 'play' || mode === 'pause')) {
@@ -251,7 +336,9 @@
       }
       if (game) renderer.draw(game, {
         mode, fps: showFps ? fps : 0, device, zoom: Number(params.get('zoom')) || 0, zoomOn: params.get('on'),
-        cross: inp.mouseAim && mode === 'play' ? { x: mouse.x, y: mouse.y } : null,
+        cross: mode === 'play' ? crosshair(inp, game) : null,
+        note: PAD.noteT > 0 ? PAD.note : null,
+        pad: padDebug ? inp.pad : null,
       });
     }
     requestAnimationFrame(frame);

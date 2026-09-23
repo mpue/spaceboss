@@ -49,19 +49,39 @@ Song gewechselt.
 
 | Tastatur + Maus | Gamepad | |
 |---|---|---|
-| A / D | linker Stick / D-Pad | laufen |
+| A / D | linker Stick (analog) / D-Pad | laufen |
 | Maus | rechter Stick | zielen (360°) |
-| linke Maustaste / J | RT / X | feuern (halten) |
-| Leertaste / W | A | springen, in der Luft **Jetpack-Doppelsprung**, halten = schweben |
-| Shift / L | LT / B | Dash (kurz unverwundbar, auch einmal in der Luft) |
-| rechte Maustaste / G | RB | Granate |
-| Q / E / Mausrad / 1–4 | LB / Y | Waffe wechseln |
-| S | Stick unten | ducken, mit Sprung durch Plattformen fallen |
-| Esc / P | Start | Pause |
+| linke Maustaste / J | RT (R2) oder X (□) | feuern (halten) |
+| Leertaste / W | A (✕) | springen, in der Luft **Jetpack-Doppelsprung**, halten = schweben |
+| Shift / L | LT (L2) oder B (○) | Dash (kurz unverwundbar, auch einmal in der Luft) |
+| rechte Maustaste / G | RB (R1) | Granate |
+| E / Mausrad / 1–4 | Y (△) | nächste Waffe |
+| Q | LB (L1) | vorige Waffe |
+| S | Stick unten / D-Pad unten | ducken, mit Sprung durch Plattformen fallen |
+| Esc / P | Start oder Back | Pause |
+| Enter | A oder Start | Menüs: starten und weiter |
 | F | | Vollbild |
 
 Ohne Maus (Tastatur allein): Pfeile laufen und zielen (hoch, schräg, in der Luft nach unten),
 K springt, J feuert, L dasht. Das Spiel schaltet automatisch um, sobald die Maus bewegt wird.
+
+### Gamepad
+
+Pads im Standard-Layout (Xbox, DualShock, DualSense, die meisten USB-Pads) werden automatisch erkannt.
+Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz drücken.
+
+- **Laufen ist analog:** leichter Stickausschlag heißt schleichen, voller Ausschlag volles Tempo.
+  Beide Sticks haben eine radiale Totzone, damit ausgeleierte Sticks nicht von selbst driften.
+- **Zielen mit dem rechten Stick** geht über alle 360°, die Richtung wird weich nachgezogen. Lässt du den
+  Stick los, bleibt die Zielrichtung stehen und dreht sich beim Umdrehen mit. Ohne rechten Stick zielt der
+  linke wie die Tastatur in acht Richtungen. Ein Fadenkreuz zeigt an, wohin geschossen wird.
+- **Trigger werden analog gelesen** und notfalls aus den Achsen 4 und 5, falls das Pad sie nicht als
+  Tasten meldet.
+- Es zählt immer das Pad, an dem zuletzt etwas gedrückt oder bewegt wurde. Kommt eins dazu oder wird eins
+  abgezogen, sagt das eine kurze Meldung; beim Abziehen pausiert das Spiel.
+- Treffer, Sprünge, Explosionen und die Schritte der Bosse lassen den Controller vibrieren.
+- **`?pad=1`** blendet eine Testanzeige ein: beide Sticks, beide Trigger und die gedrückten Tasten.
+  Damit lässt sich prüfen, ob ein ungewöhnliches Pad richtig ankommt.
 
 ## Spielprinzip
 
@@ -123,7 +143,7 @@ Schaden, werden golden dargestellt und mit „CRIT!“ beschriftet.
 ## Test-Schalter
 
 `?play=1` (Titel überspringen), `?level=2` (Level wählen), `?zoom=1.1&on=boss` (Kamera auf den Boss), `?god=1` (unverwundbar), `?weak=1` (Boss mit
-400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?zoom=3` (Kamera um den Helden vergrößern,
+400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?pad=1` (Gamepad-Testanzeige), `?zoom=3` (Kamera um den Helden vergrößern,
 zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 356, 231 und 235.
 Zum Beispiel <http://localhost:5190/?play=1&god=1&level=3&at=232> für das Finale.
 

@@ -1249,12 +1249,12 @@
         if (bn.sub) this.glowText(bn.sub, `700 30px ${FONT}`, bn.color, bn.color, 8, 0, 60);
         c.restore();
       }
-      // Fadenkreuz
+      // Fadenkreuz: mit der Maus hart am Zeiger, mit dem Stick weicher vor dem Helden
       if (screen.cross && !p.dead) {
-        const { x, y } = screen.cross;
-        c.strokeStyle = wp.color; c.lineWidth = 3;
-        c.globalAlpha = 0.9;
-        c.beginPath(); c.arc(x, y, 18, 0, TAU); c.stroke();
+        const { x, y, soft } = screen.cross;
+        c.strokeStyle = wp.color; c.lineWidth = soft ? 2 : 3;
+        c.globalAlpha = soft ? 0.55 : 0.9;
+        c.beginPath(); c.arc(x, y, soft ? 14 : 18, 0, TAU); c.stroke();
         c.beginPath();
         c.moveTo(x - 30, y); c.lineTo(x - 10, y); c.moveTo(x + 10, y); c.lineTo(x + 30, y);
         c.moveTo(x, y - 30); c.lineTo(x, y - 10); c.moveTo(x, y + 10); c.lineTo(x, y + 30);
@@ -1262,10 +1262,49 @@
         c.fillStyle = '#fff'; c.fillRect(x - 2, y - 2, 4, 4);
         c.globalAlpha = 1;
       }
+      if (screen.note) this.toast(screen.note);
+      if (screen.pad) this.padDebug(screen.pad);
       if (screen.mode === 'pause') this.overlay('PAUSE', 'PRESS ESC / START TO CONTINUE');
       if (screen.mode === 'over') this.endScreen(g, false);
       if (screen.mode === 'won') this.endScreen(g, true);
       if (screen.fps) this.glowText(screen.fps + ' FPS', `700 18px ${FONT}`, '#9ad8ff', '#000', 0, W - 40, H - 20, 'right');
+    }
+
+    // Kurze Meldung oben, etwa wenn ein Gamepad kommt oder geht
+    toast(n) {
+      const c = this.c, w = 520, x = W / 2 - w / 2, y = 24;
+      c.fillStyle = 'rgba(4,8,16,0.72)';
+      roundRect(c, x, y, w, n.sub ? 84 : 56, 12); c.fill();
+      this.glowText(n.text, `900 28px ${FONT}`, '#ffffff', '#3fb4ff', 12, W / 2, y + 40);
+      if (n.sub) this.glowText(n.sub, `700 20px ${FONT}`, '#9ad8ff', '#000', 0, W / 2, y + 70);
+    }
+
+    // Test-Anzeige für Gamepads (?pad=1): Sticks, Trigger und gedrückte Tasten
+    padDebug(s) {
+      const c = this.c, x = 40, y = H - 230;
+      c.fillStyle = 'rgba(4,8,16,0.72)';
+      roundRect(c, x - 16, y - 40, 560, 230, 12); c.fill();
+      this.glowText('GAMEPAD', `900 22px ${FONT}`, '#bfe8ff', '#3fb4ff', 8, x, y - 10, 'left');
+      const pad2 = (label, st, ox) => {
+        const cx = x + ox + 60, cy = y + 70;
+        c.strokeStyle = 'rgba(255,255,255,0.25)'; c.lineWidth = 2;
+        c.beginPath(); c.arc(cx, cy, 52, 0, TAU); c.stroke();
+        c.fillStyle = '#6affff';
+        c.beginPath(); c.arc(cx + st.x * 46, cy + st.y * 46, 9, 0, TAU); c.fill();
+        this.glowText(label, `700 16px ${FONT}`, '#9ad8ff', '#000', 0, cx, cy + 82);
+      };
+      pad2('L-STICK', s.ls, 0);
+      pad2('R-STICK', s.rs, 150);
+      // Trigger als Balken
+      [['LT', s.lt, 0], ['RT', s.rt, 60]].forEach(([n, v, ox]) => {
+        const bx = x + 330 + ox, by = y + 20;
+        c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(bx, by, 26, 100);
+        c.fillStyle = '#ffb14a'; c.fillRect(bx, by + 100 * (1 - v), 26, 100 * v);
+        this.glowText(n, `700 16px ${FONT}`, '#9ad8ff', '#000', 0, bx + 13, by + 124);
+      });
+      const on = ['a', 'b', 'x', 'y', 'lb', 'rb', 'start', 'back', 'up', 'down', 'left', 'right']
+        .filter(k => s[k]).join(' ').toUpperCase();
+      this.glowText(on || '-', `700 20px ${FONT}`, '#ffd24a', '#000', 0, x + 330, y + 170, 'left');
     }
 
     overlay(title, sub) {
@@ -1324,10 +1363,13 @@
       if (s.loading) this.glowText('LOADING  ' + Math.round(s.loading * 100) + '%', `700 32px ${FONT}`, '#bfe8ff', '#3fb4ff', 10, W / 2, 930);
       else if (Math.sin(t * 4) > -0.4) this.glowText(s.touch ? 'TAP TO START' : 'PRESS ENTER / START / CLICK', `900 40px ${FONT}`, '#ffffff', '#ff8a2a', 18, W / 2, 935);
       const help = s.device === 'gamepad'
-        ? 'L-STICK MOVE   R-STICK AIM   A JUMP (x2 JETPACK, HOLD = HOVER)   RT FIRE   LT DASH   RB GRENADE   LB/Y WEAPON'
+        ? 'L-STICK MOVE   R-STICK AIM   A JUMP (x2 JETPACK, HOLD = HOVER)   RT/X FIRE   LT/B DASH   RB GRENADE   LB/Y WEAPON   START PAUSE'
         : 'A/D MOVE   MOUSE AIM   LMB FIRE   SPACE JUMP (x2 JETPACK, HOLD = HOVER)   SHIFT DASH   RMB/G GRENADE   Q/E/WHEEL WEAPON   S DUCK';
       this.glowText(help, `600 20px ${FONT}`, '#9ad8ff', '#000', 0, W / 2, 1010);
-      this.glowText('NO MOUSE?  ARROWS AIM + J FIRE + K JUMP + L DASH', `600 18px ${FONT}`, '#6a8aa0', '#000', 0, W / 2, 1045);
+      if (s.device !== 'gamepad')
+        this.glowText('NO MOUSE?  ARROWS AIM + J FIRE + K JUMP + L DASH', `600 18px ${FONT}`, '#6a8aa0', '#000', 0, W / 2, 1045);
+      if (s.note) this.toast(s.note);
+      if (s.pad) this.padDebug(s.pad);
     }
   }
 

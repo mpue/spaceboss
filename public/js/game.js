@@ -8,6 +8,8 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const lerp = (a, b, t) => a + (b - a) * t;
+  // Winkel auf kürzestem Weg nachziehen (für das Zielen mit dem Stick)
+  const turn = (a, b, t) => a + (((b - a + Math.PI * 3) % TAU) - Math.PI) * t;
 
   // Held: Maße und Bewegung
   const P = {
@@ -414,12 +416,18 @@
 
       // Zielen: Maus/Stick als Richtung, sonst 8 Richtungen aus den Pfeiltasten
       const sx = p.x + P.shoulder.x * p.face, sy = p.y + P.shoulder.y + (p.crouch ? 26 : 0);
+      const mv = clamp(input.moveX ?? ((input.right ? 1 : 0) - (input.left ? 1 : 0)), -1, 1);
       if (input.aimPoint) {
         p.aim = Math.atan2(input.aimPoint.y + this.cam.y - sy, input.aimPoint.x + this.cam.x - sx);
         p.face = Math.cos(p.aim) >= 0 ? 1 : -1;
       } else if (input.aimVec) {
-        p.aim = Math.atan2(input.aimVec.y, input.aimVec.x);
+        // Stick: weich nachziehen, damit das Zielen nicht zappelt
+        p.aim = turn(p.aim, Math.atan2(input.aimVec.y, input.aimVec.x), 1 - Math.pow(0.00002, dt));
         p.face = Math.cos(p.aim) >= 0 ? 1 : -1;
+      } else if (input.aimHold) {
+        // Stick losgelassen: die Richtung bleibt, beim Umdrehen wird sie gespiegelt
+        if (mv > 0.25 && p.face < 0) { p.aim = Math.PI - p.aim; p.face = 1; }
+        else if (mv < -0.25 && p.face > 0) { p.aim = Math.PI - p.aim; p.face = -1; }
       } else {
         if (input.left) p.face = -1; else if (input.right) p.face = 1;
         const moving = input.left || input.right;
@@ -456,8 +464,7 @@
         p.vy = Math.min(p.vy, 0) * 0.5;
         p.afterimages.push({ x: p.x, y: p.y, face: p.face, aim: p.aim, walk: p.walk, crouch: p.crouch, t: 0 });
       } else {
-        const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-        const target = p.crouch ? 0 : dir * P.run;
+        const target = p.crouch ? 0 : mv * P.run;
         const acc = p.onGround ? P.accG : P.accA;
         if (p.vx < target) p.vx = Math.min(target, p.vx + acc * dt);
         else if (p.vx > target) p.vx = Math.max(target, p.vx - acc * dt);
