@@ -287,9 +287,31 @@
     pickup(type) {
       if (!this.ctx) return;
       const t = this.ctx.currentTime;
-      const own = { H: 'pickup_energy', G: 'pickup_missile', R: 'pickup_missile', A: 'pickup_shield' }[type];
+      const own = { H: 'pickup_energy', G: 'pickup_missile', R: 'pickup_missile', A: 'pickup_shield',
+        Q: 'pickup_shield' }[type];
       if (own && this._sample(own, 1)) return;
       [0, 4, 7, 12, 16].forEach((s, i) => this._tone(523 * Math.pow(2, s / 12), 0.12, 'triangle', 0.25, t + i * 0.05));
+    }
+    // Extras: aufsteigender Akkord beim Einsammeln, absteigend wenn sie auslaufen
+    powerUp() {
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      [0, 7, 12, 16, 19, 24].forEach((s, i) => this._tone(330 * Math.pow(2, s / 12), 0.16, 'sawtooth', 0.14, t + i * 0.045));
+      this._noise(0.5, 900, 0.14, t, 'bandpass', 1.5, 6000);
+    }
+    powerDown() {
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      [12, 7, 3, 0].forEach((s, i) => this._tone(440 * Math.pow(2, s / 12), 0.12, 'triangle', 0.16, t + i * 0.07));
+    }
+    shieldBlock() {
+      if (!this.ctx || !this._gate('shield', 0.08)) return;
+      const t = this.ctx.currentTime;
+      this._tone(1400, 0.18, 'sine', 0.22, t, 500);
+      this._noise(0.2, 3000, 0.16, t, 'highpass', 1, 800);
+    }
+    jetThrust() {
+      if (this.ctx && this._gate('jet', 0.07)) this._noise(0.16, 500, 0.16, undefined, 'lowpass', 0.9, 1400);
     }
     checkpoint() {
       if (!this.ctx) return;

@@ -270,13 +270,18 @@
     drawBackground(g, cx, cy) {
       const th = g.L.theme, c = this.c, sky = this.img[th.sky];
       if (sky) {
-        const h = H * 1.12, w = h * sky.width / sky.height;
+        const h = H * 1.12, w = h * sky.width / sky.height, top = -cy * 0.03 - 40;
         let x = -((cx * 0.04) % (w * 2));
         for (let i = 0; x < W; i++, x += w) {
           c.save();
-          if (i % 2) { c.translate(x + w, 0); c.scale(-1, 1); c.drawImage(sky, 0, -cy * 0.03 - 40, w, h); }
-          else c.drawImage(sky, x, -cy * 0.03 - 40, w, h);
+          if (i % 2) { c.translate(x + w, 0); c.scale(-1, 1); c.drawImage(sky, 0, top, w, h); }
+          else c.drawImage(sky, x, top, w, h);
           c.restore();
+          // Rauch steigt aus dem Wrack im Hintergrund (jede gespiegelte Kopie hat ihr eigenes Wrack)
+          for (const pl of th.plumes || []) {
+            const fx = i % 2 ? 1 - pl.x : pl.x;
+            this.plume(x + fx * w, top + pl.y * h, g.time, h / 1080, pl);
+          }
         }
       } else { c.fillStyle = '#081018'; c.fillRect(0, 0, W, H); }
       for (const spec of [th.far, th.near]) if (spec) this.parallax(this.layer(spec), cx, cy, spec[3], spec[4], spec[5]);
@@ -284,6 +289,33 @@
       const gr = c.createLinearGradient(0, 600, 0, H);
       gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, th.fog);
       c.fillStyle = gr; c.fillRect(0, 600, W, H - 600);
+    }
+
+    // Rauchfahne: Wolkenballen steigen auf, wachsen, treiben mit dem Wind ab und verblassen.
+    // Das Alter jedes Ballens hängt nur an der Zeit, darum braucht die Fahne keinen Zustand.
+    plume(sx, sy, t, k, pl) {
+      if (sx < -600 || sx > W + 200) return;
+      const c = this.c, N = 34, dark = this.smokeOf(pl.color || '#3e332d'), lit = this.smokeOf('#7a5236');
+      for (let i = 0; i < N; i++) {
+        const a = (t * (pl.speed || 0.075) + i / N) % 1;           // Alter von 0 bis 1
+        const wob = Math.sin(t * 0.6 + i * 2.3) * 30 * a;
+        const px = sx + (a * a * (pl.drift || 250) + wob + Math.sin(i * 7.1) * 40 * a) * k;
+        const py = sy - (a * (pl.rise || 380) + Math.sin(t * 0.9 + i) * 6) * k;
+        const r = (16 + a * (pl.size || 150)) * k;
+        const al = Math.min(1, a * 8) * Math.pow(1 - a, 1.3) * (pl.alpha || 0.6);
+        c.save();
+        c.translate(px, py);
+        c.rotate(t * 0.15 * (i % 2 ? 1 : -1) + i);
+        c.globalAlpha = al;
+        c.drawImage(a < 0.12 ? lit : dark, -r, -r, r * 2, r * 2);
+        c.restore();
+      }
+      // Glut am Fuß der Fahne
+      c.globalCompositeOperation = 'lighter';
+      const fl = 0.5 + 0.25 * Math.sin(t * 9) + 0.15 * Math.sin(t * 23);
+      this.gl(this.glowOf('#ff6a1a'), sx, sy + 4 * k, (46 + 18 * fl) * k, 0.55 * fl);
+      c.globalAlpha = 1;
+      c.globalCompositeOperation = 'source-over';
     }
 
     parallax(img, cx, cy, k, baseY, h) {
@@ -591,6 +623,25 @@
           c.fillStyle = '#fff6c0'; c.fillRect(k.x - 3 * sw, k.y + bob - 7, 3 * sw + 1, 8);
           continue;
         }
+        const X = GameDefs.EXTRAS[k.type];
+        if (X) {                                            // Extra: eigenes Motiv mit drehendem Ring
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glowOf(X.color), k.x, k.y + bob, 170 + 24 * Math.sin(k.t * 5), 0.7);
+          c.globalAlpha = 1;
+          c.globalCompositeOperation = 'source-over';
+          c.save();
+          c.translate(k.x, k.y + bob);
+          c.rotate(k.t * 1.6);
+          c.strokeStyle = X.color; c.lineWidth = 3; c.globalAlpha = 0.8;
+          c.setLineDash([14, 10]);
+          c.beginPath(); c.arc(0, 0, 50, 0, TAU); c.stroke();
+          c.restore();
+          if (!this.spr(X.img, k.x, k.y + bob, 78, { rot: Math.sin(k.t * 2) * 0.12 })) {
+            this.spr('capsule', k.x, k.y + bob, 70);
+            this.glowText(k.type, `900 26px ${FONT}`, '#ffffff', X.color, 10, k.x, k.y + bob + 10);
+          }
+          continue;
+        }
         const col = { H: '#6aff8a', G: '#ffd24a', S: '#ffa640', L: '#ff4fd8', R: '#ffe36a' }[k.type] || '#fff';
         c.globalCompositeOperation = 'lighter';
         this.gl(this.glowOf(col), k.x, k.y + bob, 130 + 16 * Math.sin(k.t * 6), 0.6);
@@ -608,7 +659,30 @@
       const p = g.player, c = this.c;
       if (!p.dead && p.inv > 0 && p.dashT <= 0 && Math.sin(g.time * 40) > 0.2) return;
       for (const a of p.afterimages) this.drawHero(g, Object.assign({}, p, a, { ghost: 1 - a.t / 0.25 }));
+      const pw = p.pow || {};
+      if (pw.over > 0 && !p.dead) {                        // Overdrive: pulsierende Aura
+        c.globalCompositeOperation = 'lighter';
+        this.gl(this.glowOf('#ff4fd8'), p.x, p.y, 230 + 30 * Math.sin(g.time * 14), 0.45);
+        c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      }
+      if (p.thrust) {                                      // Jetpack: heller Strahl aus dem Rucksack
+        c.globalCompositeOperation = 'lighter';
+        const bx = p.x - p.face * 30, by = p.y + 6;
+        this.gl(this.glowOf('#ffb14a'), bx, by + 40, 150 + 30 * Math.random(), 0.9);
+        this.gl(this.glows.gold, bx, by + 10, 70, 1);
+        c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      }
       this.drawHero(g, p);
+      if (pw.shield > 0 && !p.dead) this.shieldBubble(g, p);
+      if (pw.magnet > 0 && !p.dead) {                      // Magnet: Ringe ziehen sich zusammen
+        c.strokeStyle = '#ffd24a'; c.lineWidth = 2;
+        for (let i = 0; i < 2; i++) {
+          const u = 1 - ((g.time * 0.8 + i * 0.5) % 1);
+          c.globalAlpha = 0.35 * (1 - u);
+          c.beginPath(); c.arc(p.x, p.y, 60 + u * 220, 0, TAU); c.stroke();
+        }
+        c.globalAlpha = 1;
+      }
       // Mündungsfeuer
       if (p.fired > 0 && !p.dead) {
         const wp = GameDefs.WEAPONS[p.weapon];
@@ -1525,6 +1599,37 @@
       }
     }
 
+    // Schildblase: Sechseckmuster, das bei Treffern aufblitzt und mit jedem Treffer dünner wird
+    shieldBubble(g, p) {
+      const c = this.c, hit = p.shieldHit || 0, k = Math.max(1, p.shieldHp) / 3;
+      const warn = p.pow.shield < 2.5 && Math.sin(g.time * 24) < 0;
+      const R = 108 + Math.sin(g.time * 3) * 3 + hit * 14;
+      c.save();
+      c.translate(p.x, p.y);
+      c.globalCompositeOperation = 'lighter';
+      this.gl(this.glowOf('#6ae8ff'), 0, 0, R * 2.3, (0.18 + 0.5 * hit) * (warn ? 0.4 : 1));
+      c.globalAlpha = (0.35 + 0.3 * k + 0.4 * hit) * (warn ? 0.35 : 1);
+      c.strokeStyle = hit > 0.3 ? '#ffffff' : '#6ae8ff';
+      c.lineWidth = 3;
+      c.beginPath(); c.arc(0, 0, R, 0, TAU); c.stroke();
+      // Sechsecke auf der Kugel, die langsam um sie herum wandern
+      c.lineWidth = 1.5;
+      c.globalAlpha *= 0.6;
+      for (let i = 0; i < 14; i++) {
+        const a = i / 14 * TAU + g.time * 0.5, r = R * (0.55 + 0.35 * ((i * 5) % 3) / 2);
+        const hx = Math.cos(a) * r, hy = Math.sin(a) * r * 0.9, s = 12 + (i % 3) * 3;
+        c.beginPath();
+        for (let j = 0; j <= 6; j++) {
+          const b = j / 6 * TAU;
+          j ? c.lineTo(hx + Math.cos(b) * s, hy + Math.sin(b) * s) : c.moveTo(hx + Math.cos(b) * s, hy + Math.sin(b) * s);
+        }
+        c.stroke();
+      }
+      c.restore();
+      c.globalAlpha = 1;
+      c.globalCompositeOperation = 'source-over';
+    }
+
     // ---------- HUD ----------
 
     drawHud(g, screen) {
@@ -1563,6 +1668,22 @@
         c.fillStyle = w === p.weapon ? D.WEAPONS[w].color : 'rgba(255,255,255,0.25)';
         c.fillRect(ix, 240, 40, 4);
         ix += 48;
+      }
+      // Laufende Extras: Motiv, Name und ablaufender Balken, kurz vor Schluss blinkend
+      let ey = 262;
+      for (const ch of Object.keys(D.EXTRAS)) {
+        const X = D.EXTRAS[ch], left = p.pow ? p.pow[X.key] : 0;
+        if (!(left > 0)) continue;
+        if (left < 2.5 && Math.sin(g.time * 20) < 0) { ey += 50; continue; }
+        c.fillStyle = 'rgba(4,8,16,0.55)';
+        roundRect(c, 30, ey, 360, 42, 10); c.fill();
+        if (!this.spr(X.img, 56, ey + 21, 36)) { c.fillStyle = X.color; c.fillRect(44, ey + 9, 24, 24); }
+        let label = X.name;
+        if (X.key === 'shield') label += '  ' + '◆'.repeat(Math.max(0, p.shieldHp));
+        this.glowText(label, `800 18px ${FONT}`, '#ffffff', X.color, 8, 84, ey + 20, 'left');
+        c.fillStyle = 'rgba(255,255,255,0.1)'; c.fillRect(84, ey + 28, 290, 5);
+        c.fillStyle = X.color; c.fillRect(84, ey + 28, 290 * left / X.time, 5);
+        ey += 50;
       }
       // Punkte, Münzen, Kette
       this.glowText(String(g.score).padStart(8, '0'), `900 46px ${FONT}`, '#ffffff', '#3fb4ff', 14, W - 40, 76, 'right');

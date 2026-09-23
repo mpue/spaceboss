@@ -16,6 +16,9 @@
 //   W  Sandwurm   k  Gleiterreiter   h  Dornenpflanze   m  Mörserläufer
 //   l  Blutegel   f  Stechfliege   o  Sporenpilz   U  Schlammkoloss
 //   K  Beginn der Boss-Arena   Z  Boss
+//
+// Extras (J Jetpack, Q Schild, O Overdrive, Y Magnet) stehen nicht in den Karten, sondern als
+// Spaltenliste in LEVELS[].extras; build() setzt sie auf den Boden der jeweiligen Spalte.
 (function () {
   'use strict';
 
@@ -583,28 +586,36 @@
   const LEVELS = [
     { name: 'CRASH SITE', sub: 'SECTOR 7  -  PLANET SURFACE', chunks: CHUNKS1, boss: 'spaceboss',
       music: { level: 'metal man', boss: 'king of steel' },
+      extras: [[64, 'Q'], [170, 'J'], [290, 'O']],
       theme: { ground: 'ground', metal: 'metal', sky: 'sky', far: ['colony', '#0c1628', 0.72, 0.16, 820, 460],
         near: ['spires', '#0e0818', 0.62, 0.38, 960, 440], wreck: true, backwall: true,
         rim: 'rgba(141,255,58,0.55)', fog: 'rgba(40,70,60,0.35)' } },
     { name: 'HIVE CAVERNS', sub: 'BENEATH THE SURFACE', chunks: CHUNKS2, boss: 'queen',
       music: { level: 'king of steel', boss: 'metal man' },
+      extras: [[52, 'O'], [128, 'Q'], [196, 'J']],
       theme: { ground: 'cave', metal: 'metal', sky: 'cave_bg', far: null,
         near: ['fungi', '#12061c', 0.66, 0.35, 985, 360], wreck: false, backwall: false,
         rim: 'rgba(255,90,210,0.6)', fog: 'rgba(90,20,80,0.35)' } },
     { name: 'MOTHERSHIP', sub: 'THE HEART OF THE INVASION', chunks: CHUNKS3, boss: 'final',
       music: { level: 'metal man', boss: 'king of steel' },
+      extras: [[48, 'Q'], [120, 'Y'], [200, 'O']],
       theme: { ground: 'hull', metal: 'hull', sky: 'ship_bg', far: ['machinery', '#0a0818', 0.6, 0.25, 930, 500],
         near: null, wreck: false, backwall: false,
         rim: 'rgba(255,80,220,0.6)', fog: 'rgba(60,20,90,0.3)' } },
     { name: 'THE OUTBACKS', sub: 'WHERE THE MOTHERSHIP FELL', chunks: CHUNKS4, boss: 'devourer',
       music: { level: 'king of steel', boss: 'metal man' },
+      extras: [[60, 'J'], [150, 'Y'], [248, 'O']],
       theme: { ground: 'sand', metal: 'rust', sky: 'desert_bg', far: ['debris', '#3a2418', 0.55, 0.18, 880, 420],
         near: ['dunes', '#4a2a18', 0.45, 0.4, 990, 360], wreck: false, backwall: false,
+        // Rauch aus dem abgestürzten Mutterschiff (Position als Bruchteil des Hintergrundbildes)
+        plumes: [{ x: 0.797, y: 0.39, size: 230, rise: 400, drift: 330, alpha: 0.5 },
+          { x: 0.845, y: 0.405, size: 120, rise: 250, drift: 200, speed: 0.1, alpha: 0.35 }],
         rim: 'rgba(255,180,90,0.5)', fog: 'rgba(200,110,40,0.28)',
         // Treibsand statt Säure: heller, tut weniger weh
         acid: { top: '#d8a24a', bottom: '#6a4418', glow: '#ffb14a', dmg: 12 } } },
     { name: 'THE SWAMP', sub: 'WHERE THE ROOTS DRINK', chunks: CHUNKS5, boss: 'rotmother',
       music: { level: 'metal man', boss: 'king of steel' },
+      extras: [[70, 'Q'], [160, 'J'], [250, 'O']],
       theme: { ground: 'mud', metal: 'bark', sky: 'swamp_bg', far: ['trees', '#0a1a12', 0.6, 0.2, 900, 520],
         near: ['reeds', '#0c1c10', 0.5, 0.42, 995, 300], wreck: false, backwall: false,
         rim: 'rgba(180,255,120,0.45)', fog: 'rgba(40,90,50,0.4)',
@@ -634,6 +645,24 @@
         else if (ch === 'K') arena = { x: x * T, w: 30 * T };
         else if (ch === 'Z') boss = { x: px, y: py };
         else spawns.push({ ch, x: px, y: py, col: x });
+      }
+    }
+    // Extras auf den Boden ihrer Spalte setzen (nicht in Säure, Wasser oder eine Grube)
+    const at = (x, y) => (x < 0 || x >= w || y < 0 || y >= h) ? 0 : tiles[y * w + x];
+    for (const [col, ch] of def.extras || []) {
+      let placed = false;
+      for (let d = 0; d < 12 && !placed; d++) {
+        for (const x of [col + d, col - d]) {
+          if (placed || (arena && x * T >= arena.x)) continue;
+          for (let y = h - 2; y >= 2; y--) {
+            const here = at(x, y), below = at(x, y + 1);
+            if (SOLID[here] || here === 4 || here === 7 || SOLID[at(x, y - 1)]) continue;
+            if (!(SOLID[below] || below === 3)) continue;
+            spawns.push({ ch, x: x * T + T / 2, y: y * T + T, col: x });
+            placed = true;
+            break;
+          }
+        }
       }
     }
     // Kisten und Fässer haben Trefferpunkte

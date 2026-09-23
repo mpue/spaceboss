@@ -138,6 +138,16 @@ ASSETS = {
               GREEN, 1024, 1024),
     "mortar": ("a four legged alien mortar walker machine, armored sand colored hull with a short thick mortar tube "
                "pointing up and glowing orange lights, facing to the left, exact side view profile", GREEN, 1536, 1024),
+    # Extras: zeitlich begrenzte Verstärkungen zum Einsammeln
+    "pu_jet": ("a compact sci-fi jetpack power-up item, twin big glowing orange thruster nozzles, white and orange "
+               "armored casing with carrying straps, collectible video game item, three quarter view", GREEN, 1024, 1024),
+    "pu_shield": ("a sci-fi energy shield generator power-up item, small round chrome emitter device projecting a "
+                  "glowing translucent cyan hexagon pattern energy dome around itself, collectible video game item",
+                  GREEN, 1024, 1024),
+    "pu_over": ("a sci-fi overdrive power-up item, a glowing magenta energy battery cell in a black armored frame "
+                "with crackling lightning arcs, collectible video game item, three quarter view", GREEN, 1024, 1024),
+    "pu_magnet": ("a sci-fi horseshoe magnet power-up item, chunky red and chrome horseshoe magnet with glowing gold "
+                  "energy tips, collectible video game item, three quarter view", GREEN, 1024, 1024),
     # Der Mörserläufer wird prozedural animiert, darum Rumpf und Bein getrennt
     "mortar_body": ("a single compact sand colored armored turret pod hovering alone in empty space, battered "
                     "armor plates, a short thick mortar tube pointing up and glowing orange lights, four empty "

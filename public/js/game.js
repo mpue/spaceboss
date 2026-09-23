@@ -31,6 +31,14 @@
   };
   const ORDER = ['blaster', 'spread', 'laser', 'rocket'];
   const PICK_WEAPON = { S: 'spread', L: 'laser', R: 'rocket' };
+  // Extras: zeitlich begrenzte Verstärkungen (Buchstabe = Kennung im Level)
+  const EXTRAS = {
+    J: { key: 'jet', name: 'JETPACK', time: 12, color: '#ffb14a', img: 'pu_jet', hint: 'HOLD JUMP TO FLY' },
+    Q: { key: 'shield', name: 'SHIELD', time: 15, color: '#6ae8ff', img: 'pu_shield', hint: 'BLOCKS 3 HITS' },
+    O: { key: 'over', name: 'OVERDRIVE', time: 10, color: '#ff4fd8', img: 'pu_over', hint: 'DOUBLE FIRE RATE' },
+    Y: { key: 'magnet', name: 'MAGNET', time: 20, color: '#ffd24a', img: 'pu_magnet', hint: 'PULLS IN COINS' },
+  };
+  const EXTRA_KEYS = Object.keys(EXTRAS);
 
   const EN = {
     crawler: { w: 96, h: 58, hp: 30, score: 100, flesh: true, dmg: 15, coins: 1 },
@@ -258,6 +266,7 @@
         aim: 0, crouch: false, fireCd: 0, weapon: 'blaster', ammo: { blaster: Infinity }, grenades: 3,
         walk: 0, recoil: 0, dead: false, deadT: 0, spin: 0, spinV: 0, fell: false, bounced: false,
         land: 0, stepT: 0, drop: 0, fired: 0,
+        pow: { jet: 0, shield: 0, over: 0, magnet: 0 }, shieldHp: 0, shieldHit: 0, thrust: false,
         muzzle: { x, y }, afterimages: [] };
     }
 
@@ -566,14 +575,24 @@
       }
       p.boostT = Math.max(0, (p.boostT || 0) - dt);
       if (!input.jump && p.vy < -500 && p.boostT <= 0) p.vy = Math.max(p.vy, -500);      // kurzer Sprung bei kurzem Druck
-      p.hovering = input.jump && !p.onGround && p.vy > 0 && p.fuel > 0 && p.jets === 0;
+      // Extra Jetpack: gehaltene Sprungtaste gibt in der Luft Dauerschub, ohne Tankanzeige
+      p.thrust = p.pow.jet > 0 && input.jump && !p.onGround && !p.wet && p.dashT <= 0;
+      if (p.thrust) {
+        p.vy = Math.max(-780, p.vy - 5600 * dt);
+        if (p.y < 170 && p.vy < 0) p.vy = 0;                // nicht über den Bildrand hinaus
+        this.jetFx(p, 2, 1.6);
+        this.audio.jetThrust();
+        if (Math.random() < 0.3) this.rumble(0.15, 0.1, 40);
+      }
+      p.hovering = !p.thrust && input.jump && !p.onGround && p.vy > 0 && p.fuel > 0 && p.jets === 0;
       if (p.hovering) {
         p.vy = Math.min(p.vy, P.hover);
         p.fuel = Math.max(0, p.fuel - P.fuelUse * dt);
         if (Math.random() < 0.7) this.jetFx(p, 1, 0.8);
         this.audio.jet();
       }
-      if (p.dashT <= 0) p.vy = Math.min(P.fall, p.vy + P.grav * dt);
+      if (p.dashT <= 0) p.vy = Math.min(P.fall, p.vy + P.grav * dt * (p.thrust ? 0.35 : 1));
+      this.tickExtras(p, dt);
 
       const wasGround = p.onGround, vyBefore = p.vy;
       const r = this.move(p, dt);
@@ -629,6 +648,35 @@
       this.updateWeapon(p, dt, input, pr);
     }
 
+    // Extras laufen ab; kurz vor dem Ende warnt der HUD, beim Ende gibt es einen Ton
+    tickExtras(p, dt) {
+      for (const ch of EXTRA_KEYS) {
+        const k = EXTRAS[ch].key;
+        if (p.pow[k] <= 0) continue;
+        p.pow[k] = Math.max(0, p.pow[k] - dt);
+        if (p.pow[k] === 0) {
+          if (k === 'shield') p.shieldHp = 0;
+          this.audio.powerDown();
+          this.float(p.x, p.y - 120, EXTRAS[ch].name + ' OFF', '#9aa8b8');
+        }
+      }
+      p.shieldHit = Math.max(0, p.shieldHit - dt * 3);
+      if (p.pow.over > 0 && Math.random() < 0.25) this.part({ x: p.x + rnd(-40, 40), y: p.y + rnd(-60, 50),
+        vx: rnd(-40, 40), vy: rnd(-200, -80), life: rnd(0.2, 0.4), size: rnd(2, 3), color: '#ff4fd8', kind: 'spark' });
+    }
+
+    // Extra einsammeln: läuft von vorn an, auch wenn es noch aktiv war
+    grantExtra(ch) {
+      const p = this.player, X = EXTRAS[ch];
+      p.pow[X.key] = X.time;
+      if (X.key === 'shield') { p.shieldHp = 3; p.shieldHit = 1; }
+      this.audio.powerUp();
+      this.say(X.name, X.color, 1.8, true, X.hint);
+      this.ring(p.x, p.y, 220, X.color);
+      this.flash = Math.max(this.flash, 0.2); this.flashColor = X.color;
+      this.rumble(0.4, 0.3, 120);
+    }
+
     onOneway(p) {
       const T = this.L.T, ty = Math.floor((p.y + p.h / 2 + 2) / T);
       return this.tileAt(Math.floor(p.x / T), ty) === 3;
@@ -678,8 +726,9 @@
       }
       this.audio.laser(false);
       if (!input.fire || p.fireCd > 0) return;
-      p.fireCd = wp.rate;
+      p.fireCd = wp.rate * (p.pow.over > 0 ? 0.5 : 1);
       p.fired = 0.06;
+      const n0 = this.bullets.length;
       const mx = p.muzzle.x, my = p.muzzle.y, a = p.aim;
       if (p.weapon === 'blaster') {
         const s = a + rnd(-0.03, 0.03);
@@ -705,6 +754,7 @@
         this.shake = Math.max(this.shake, 0.2);
         this.rumble(0.4, 0.3, 90);
       }
+      if (p.pow.over > 0) for (let i = n0; i < this.bullets.length; i++) { this.bullets[i].dmg *= 1.5; this.bullets[i].over = true; }
       this.audio.shot(p.weapon);
       // Mündungsfeuer und Hülsen
       this.part({ x: mx, y: my, vx: 0, vy: 0, life: 0.06, size: p.weapon === 'blaster' ? 60 : 90, color: wp.color, kind: 'flash' });
@@ -738,7 +788,7 @@
       }
       const x0 = p.muzzle.x, y0 = p.muzzle.y, x1 = x0 + dx * len, y1 = y0 + dy * len;
       this.beam = { x0, y0, x1, y1, t: this.time };
-      const dps = 190;
+      const dps = 190 * (p.pow.over > 0 ? 1.5 : 1);
       for (const e of this.enemies) {
         if (e.dead || e.intro) continue;
         let hx, hy;
@@ -771,6 +821,18 @@
     hurtPlayer(dmg, dir) {
       const p = this.player;
       if (p.dead || p.inv > 0 || this.opts.god || this.won) return;
+      if (p.pow.shield > 0 && p.shieldHp > 0) {        // Extra Schild: der Treffer prallt ab
+        p.shieldHp--;
+        p.shieldHit = 1;
+        p.inv = 0.6;
+        this.audio.shieldBlock();
+        this.ring(p.x, p.y, 160, '#6ae8ff');
+        this.burst(p.x, p.y, 18, { color: '#6ae8ff', speed: 600, life: 0.35, size: 3 });
+        this.shake = Math.max(this.shake, 0.2);
+        this.rumble(0.3, 0.3, 90);
+        if (p.shieldHp <= 0) { p.pow.shield = 0; this.audio.powerDown(); this.float(p.x, p.y - 120, 'SHIELD BROKEN', '#6ae8ff'); }
+        return;
+      }
       p.hp -= dmg;
       p.inv = P.inv;
       this.hurtFlash = 1;
@@ -788,6 +850,7 @@
       const p = this.player;
       if (p.dead) return;
       p.dead = true; p.deadT = 0; p.hp = 0;
+      p.pow = { jet: 0, shield: 0, over: 0, magnet: 0 }; p.shieldHp = 0; p.thrust = false;
       p.vy = -900; p.vx = -p.face * 420;
       p.spinV = -p.face * rnd(2.5, 4);              // Taumeln in Stoßrichtung
       p.crouch = false; p.h = P.h;
@@ -837,7 +900,7 @@
         case 'o': this.addEnemy('sporepod', s.x, s.y - 75); break;
         case 'U': this.addEnemy('mudhulk', s.x, s.y - 80); break;
         case '$': this.pickups.push({ type: 'coin', x: s.x, y: s.y - T / 2, vx: 0, vy: 0, fixed: true, t: rnd(0, 6) }); break;
-        case 'H': case 'G': case 'S': case 'L': case 'R': case 'A':
+        case 'H': case 'G': case 'S': case 'L': case 'R': case 'A': case 'J': case 'Q': case 'O': case 'Y':
           this.pickups.push({ type: s.ch, x: s.x, y: s.y - 40, vx: 0, vy: 0, fixed: true, t: 0 }); break;
         case '>': this.pads = this.pads || []; this.pads.push({ x: s.x, y: s.y, t: 0 }); break;
       }
@@ -1393,6 +1456,7 @@
       else if (r < 0.06) this.dropPickup(e.x, e.y, 'H');
       else if (r < 0.1) this.dropPickup(e.x, e.y, 'G');
       else if (r < 0.13) this.dropPickup(e.x, e.y, pick(['S', 'L', 'R']));
+      else if (r < 0.155) this.dropPickup(e.x, e.y, pick(EXTRA_KEYS));
     }
 
     mult() { return Math.min(8, 1 + Math.floor(this.combo / 5)); }
@@ -2312,7 +2376,8 @@
         if (r < 0.35) for (let k = 0; k < 5; k++) this.dropCoin(cx, cy);
         else if (r < 0.6) this.dropPickup(cx, cy, 'H');
         else if (r < 0.8) this.dropPickup(cx, cy, 'G');
-        else this.dropPickup(cx, cy, pick(['S', 'L', 'R']));
+        else if (r < 0.9) this.dropPickup(cx, cy, pick(['S', 'L', 'R']));
+        else this.dropPickup(cx, cy, pick(EXTRA_KEYS));
       }
     }
 
@@ -2402,9 +2467,11 @@
         k.t += dt;
         if (k.life !== undefined) k.life -= dt;
         const dx = p.x - k.x, dy = p.y - k.y, d = Math.hypot(dx, dy);
-        if (k.type === 'coin' && !p.dead && d < 200 && (k.t > 0.4 || k.fixed)) {
+        const reach = p.pow.magnet > 0 ? 950 : 200;
+        if (k.type === 'coin' && !p.dead && d < reach && (k.t > 0.4 || k.fixed)) {
           k.fixed = false;
-          k.vx += dx / d * 5000 * dt; k.vy += dy / d * 5000 * dt;
+          const pull = p.pow.magnet > 0 ? 9000 : 5000;
+          k.vx += dx / d * pull * dt; k.vy += dy / d * pull * dt;
           k.vx *= 0.9; k.vy *= 0.9;
           k.x += k.vx * dt; k.y += k.vy * dt;
         } else if (!k.fixed) {
@@ -2440,6 +2507,7 @@
         this.part({ x: k.x, y: k.y, life: 0.15, size: 50, color: '#ffd24a', kind: 'flash' });
         return;
       }
+      if (EXTRAS[k.type]) { this.grantExtra(k.type); return; }
       this.audio.pickup(k.type);
       this.burst(k.x, k.y, 20, { color: '#fff2a0', speed: 400, life: 0.5, size: 3 });
       this.ring(k.x, k.y, 120, '#fff2a0');
@@ -2533,5 +2601,5 @@
   }
 
   window.Game = Game;
-  window.GameDefs = { P, WEAPONS, ORDER, EN, BOSSES, RIGS, WALKERS, W, H };
+  window.GameDefs = { P, WEAPONS, ORDER, EN, BOSSES, RIGS, WALKERS, EXTRAS, W, H };
 })();

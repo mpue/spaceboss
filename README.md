@@ -108,6 +108,23 @@ Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz dr
 - **Waten:** Im Sumpf stehen Tümpel. Im Wasser läuft der Held nur noch mit 60 % Tempo, springt niedriger,
   fällt langsamer und kann nicht dashen. Das Wasser wird über ihm gezeichnet, er steckt also wirklich drin.
 
+### Extras
+
+Zeitlich begrenzte Verstärkungen. In jedem Level liegen drei an festen Stellen, dazu fallen sie selten aus
+Kisten (10 %) und von Gegnern (2,5 %). Ein neues Extra derselben Sorte startet die Zeit neu. Links unter der
+Waffe zeigt der HUD, was gerade läuft und wie lange noch; kurz vor Schluss blinkt der Balken. Beim Tod sind
+alle Extras weg.
+
+| Extra | Kennung | Dauer | Wirkung |
+|---|---|---|---|
+| **Jetpack** | `J` | 12 s | Sprungtaste in der Luft halten = Dauerschub nach oben, ohne Tankanzeige |
+| **Shield** | `Q` | 15 s | Schildblase fängt drei Treffer komplett ab und wird dabei sichtbar dünner |
+| **Overdrive** | `O` | 10 s | doppelte Feuerrate und 1,5-facher Schaden für alle Waffen, auch den Laser |
+| **Magnet** | `Y` | 20 s | zieht Münzen aus fast einer Bildschirmbreite heran |
+
+Die Fundorte stehen nicht in den ASCII-Karten, sondern als Spaltenliste in `LEVELS[].extras`
+(`level.js`); `build()` setzt jedes Extra auf den Boden seiner Spalte und weicht Gruben, Säure und Wasser aus.
+
 ### Gegner
 
 | Gegner | Verhalten |
@@ -206,6 +223,11 @@ entstehen im Code. **Beim Sterben** fällt er richtig um: Er wird zurückgeschle
 kippt um den Fußpunkt in die Seitenlage, rutscht aus und bleibt rauchend und funkend liegen — der Arm hängt
 herab, die Beine sacken zusammen. Die Ansatzpunkte (Armstumpf, Hüfte, Schulter, Mündung, Knie) stehen in `HERO` in `render.js`.
 Die Beine der Krabbler werden ebenfalls prozedural gezeichnet.
+
+Der Hintergrund von **The Outbacks** hatte die Rauchfahne des abgestürzten Mutterschiffs eingebacken, sie
+stand still. `tools/desmoke.py` entfernt sie aus dem Render (der Himmel wird aus der Umgebung geschätzt),
+im Spiel steigt der Rauch dann animiert auf: Wolkenballen quellen aus dem Wrack, wachsen, treiben mit dem
+Wind ab und verblassen, am Fuß flackert Glut (`plumes` im Level-Thema, `plume()` in `render.js`).
 
 ## Sounds
 

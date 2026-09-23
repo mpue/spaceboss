@@ -39,6 +39,11 @@ SPRITES = {
     "bat": ("bat_11", 300, 200),
     "saucer": ("saucer_11", 300, 200),
     "sentinel": ("sentinel_11", 260, 300),
+    # Extras
+    "pu_jet": ("pu_jet_11", 200, 200),
+    "pu_shield": ("pu_shield_11", 200, 200),
+    "pu_over": ("pu_over_11", 200, 200),
+    "pu_magnet": ("pu_magnet_23", 200, 200),
     # Laufgegner in Einzelteilen (Rumpf und Bein, prozedural animiert)
     "mortar_body": ("mortar_body_51", 460, 320),
     "mortar_leg": ("mortar_leg_23", 200, 400),
@@ -80,7 +85,7 @@ SPRITES = {
 }
 ADDITIVE = {"explosion": ("explosion_11", 512), "plasma": ("plasma_11", 512)}
 BACKDROPS = {"sky": ("sky_11", 1920), "title": ("title_23", 1920), "cave_bg": ("cave_bg_11", 1920),
-             "ship_bg": ("ship_bg_11", 1920), "desert_bg": ("desert_bg_11", 1920),
+             "ship_bg": ("ship_bg_11", 1920), "desert_bg": ("desert_bg_clean", 1920),
              "swamp_bg": ("swamp_bg_11", 1920)}
 TEXTURES = {"ground": "ground_23", "metal": "metal_11", "cave": "cave_11", "hull": "hull_23",
             "sand": "sand_11", "rust": "rust_23", "mud": "mud_11", "bark": "bark_11"}
