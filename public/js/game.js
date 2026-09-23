@@ -43,6 +43,10 @@
     bat: { w: 110, h: 70, hp: 20, score: 150, flesh: true, dmg: 15, coins: 1 },
     saucer: { w: 130, h: 70, hp: 45, score: 300, dmg: 15, coins: 3 },
     sentinel: { w: 96, h: 120, hp: 110, score: 400, dmg: 20, coins: 4 },
+    sandworm: { w: 120, h: 170, hp: 45, score: 250, flesh: true, dmg: 20, coins: 2 },
+    skimmer: { w: 200, h: 90, hp: 55, score: 300, dmg: 20, coins: 3 },
+    thorn: { w: 110, h: 150, hp: 55, score: 200, flesh: true, dmg: 15, coins: 2 },
+    mortar: { w: 220, h: 150, hp: 180, score: 600, dmg: 20, coins: 6 },
     boss: { w: 440, h: 600, hp: 4200, score: 25000, dmg: 30, coins: 60 },
   };
 
@@ -80,6 +84,17 @@
       mouth: { x: 234, y: -291 },        // aus dem Maul kommt die Säure
       body: { x0: -230, y0: -510, x1: 230, y1: 300 },
     },
+    // Der Devourer: eine Kette aus Segmenten, die dem Kopf hinterherläuft
+    worm: {
+      kind: 'chain',
+      parts: { head: 'dev_maw', seg: 'dev_seg', arm: 'dev_arm' },
+      headH: 360, segH: 300, segs: 11, spacing: 132, taper: 0.945,
+      armLen: 330, armAt: 1,
+      mouth: { x: -150, y: 10 },         // Maul relativ zum Kopf (Kopf zeigt nach -x)
+      core: { x: -120, y: 0, r: 85 },    // glühender Schlund: die Schwachstelle
+      headR: 130, segR: 92,
+      body: { x0: -180, y0: -180, x1: 180, y1: 180 },
+    },
   };
   const RIG = RIGS.boss;
 
@@ -96,6 +111,10 @@
       color: '#ff4a6a', minion: 'saucer',
       pool: [['spread', 'volley', 'beam', 'slam'], ['strikes', 'drones', 'beam', 'rings'], ['rings', 'beam', 'strikes', 'volley']],
       intro: 'THE SPACEBOSS RETURNS', down: 'SPACEBOSS DESTROYED' },
+    devourer: { name: 'THE DEVOURER', rig: 'worm', hp: 5200, score: 80000, color: '#ff9a3c', minion: 'sandworm',
+      armor: 0.45, critMul: 2.4,                       // Panzerung: nur der Schlund nimmt vollen Schaden
+      pool: [['spit', 'strikes'], ['brood', 'beam', 'spit'], ['rings', 'beam', 'strikes']],
+      intro: 'THE SAND IS MOVING', down: 'THE DEVOURER FALLS' },
   };
 
   class Game {
@@ -258,6 +277,14 @@
         for (let tx = x0; tx <= x1; tx++) if (this.tileAt(tx, fy) === 4) res.acid = true;
       }
       return res;
+    }
+
+    // Oberkante des Bodens unter x, ausgehend von y nach unten gesucht
+    surfaceY(x, y) {
+      const T = this.L.T, tx = Math.floor(x / T);
+      let ty = Math.max(0, Math.floor(y / T));
+      while (ty < this.L.h && !this.L.SOLID[this.tileAt(tx, ty)]) ty++;
+      return ty * T;
     }
 
     groundAhead(a, dir) {
@@ -514,7 +541,7 @@
         }
       }
       if (r.acid) {
-        this.hurtPlayer(15, 0);
+        this.hurtPlayer((this.L.theme.acid && this.L.theme.acid.dmg) || 15, 0);
         if (!p.dead) { p.vy = -1300; p.jets = 1; p.boostT = 0.4; }
         for (let i = 0; i < 20; i++) this.part({ x: p.x + rnd(-30, 30), y: p.y + p.h / 2, vx: rnd(-200, 200), vy: rnd(-700, -200),
           g: 1800, life: rnd(0.4, 0.8), size: rnd(4, 9), color: '#8dff3a', kind: 'goo' });
@@ -650,11 +677,24 @@
       const dps = 190;
       for (const e of this.enemies) {
         if (e.dead || e.intro) continue;
-        const hb = this.hitbox(e);
-        if (segBox(x0, y0, x1, y1, hb)) {
+        let hx, hy;
+        if (e.hitCircles) {
+          let best = null, bd = 1e9;
+          for (const c of e.hitCircles) {
+            const t = clamp((c.x - x0) * dx + (c.y - y0) * dy, 0, len);
+            const d = Math.hypot(x0 + dx * t - c.x, y0 + dy * t - c.y);
+            if (d < c.r && t < bd) { bd = t; best = { x: x0 + dx * t, y: y0 + dy * t }; }
+          }
+          if (!best) continue;
+          hx = best.x; hy = best.y;
+        } else {
+          const hb = this.hitbox(e);
+          if (!segBox(x0, y0, x1, y1, hb)) continue;
           const cx = clamp(e.x, hb.x0, hb.x1);
           const t = clamp(((cx - x0) * dx + (e.y - y0) * dy), 0, len);
-          const hx = x0 + dx * t, hy = y0 + dy * t;
+          hx = x0 + dx * t; hy = y0 + dy * t;
+        }
+        {
           this.damageEnemy(e, dps * dt, hx, hy, dx, dy, true);
           if (Math.random() < 0.5) this.part({ x: hx, y: hy, vx: rnd(-400, 400) - dx * 300, vy: rnd(-400, 400) - dy * 300,
             life: rnd(0.1, 0.3), size: rnd(2, 4), color: '#ff9af0', kind: 'spark' });
@@ -724,6 +764,10 @@
         case 'v': this.addEnemy('bat', s.x, s.y - 40); break;
         case 'u': this.addEnemy('saucer', s.x, s.y - 40); break;
         case 'n': this.addEnemy('sentinel', s.x, s.y - 90); break;
+        case 'W': this.addEnemy('sandworm', s.x, s.y - 85, { hidden: true }); break;
+        case 'k': this.addEnemy('skimmer', s.x, s.y - 250); break;
+        case 'h': this.addEnemy('thorn', s.x, s.y - 75); break;
+        case 'm': this.addEnemy('mortar', s.x, s.y - 75); break;
         case '$': this.pickups.push({ type: 'coin', x: s.x, y: s.y - T / 2, vx: 0, vy: 0, fixed: true, t: rnd(0, 6) }); break;
         case 'H': case 'G': case 'S': case 'L': case 'R': case 'A':
           this.pickups.push({ type: s.ch, x: s.x, y: s.y - 40, vx: 0, vy: 0, fixed: true, t: 0 }); break;
@@ -737,6 +781,15 @@
         cd: rnd(0.8, 1.8), flash: 0, dead: false, home: { x, y }, state: 'idle', walk: 0 }, extra);
       this.enemies.push(e);
       return e;
+    }
+
+    // Trifft der Punkt den Gegner? Der Leviathan besteht aus Kreisen statt aus einem Rechteck.
+    hitTest(e, x, y, r) {
+      if (e.hitCircles) {
+        for (const c of e.hitCircles) if (Math.hypot(x - c.x, y - c.y) < c.r + r) return true;
+        return false;
+      }
+      return inBox(x, y, this.hitbox(e), r);
     }
 
     hitbox(e) {
@@ -926,6 +979,100 @@
           }
           break;
         }
+        case 'sandworm': {
+          // gräbt sich unter dem Sand heran und bricht unter dem Helden heraus
+          e.timer = (e.timer || 0) - dt;
+          const gy = this.surfaceY(e.x, e.home.y - 200);
+          if (!e.state || e.state === 'idle') { e.state = 'under'; e.timer = rnd(0.4, 1.2); }
+          if (e.state === 'under') {
+            e.hidden = true;
+            e.y = gy + 110;
+            if (alive && Math.abs(dx) > 40) e.x += Math.sign(dx) * 240 * dt;
+            if (Math.random() < 0.5) this.part({ x: e.x + rnd(-40, 40), y: gy - 4, vx: rnd(-60, 60), vy: rnd(-160, -40),
+              g: 900, life: rnd(0.3, 0.6), size: rnd(4, 9), color: '#d8a24a', kind: 'goo' });
+            if (alive && Math.abs(dx) < 90 && e.timer <= 0) { e.state = 'rise'; e.timer = 0; this.audio.squish(); }
+          } else if (e.state === 'rise') {
+            e.hidden = false;
+            e.timer += dt;
+            e.y = gy + 110 - easeOut(clamp(e.timer / 0.22, 0, 1)) * (e.h + 40);
+            if (e.timer < 0.05) {
+              this.dust(e.x, gy, 18);
+              this.shake = Math.max(this.shake, 0.25);
+              for (let i = 0; i < 16; i++) this.part({ x: e.x + rnd(-50, 50), y: gy, vx: rnd(-300, 300), vy: rnd(-700, -200),
+                g: 1500, life: rnd(0.4, 0.9), size: rnd(4, 10), color: '#d8a24a', kind: 'goo' });
+            }
+            if (e.timer > 1.4) { e.state = 'dive'; e.timer = 0; }
+          } else {
+            e.timer += dt;
+            e.y = gy + 110 - (1 - easeOut(clamp(e.timer / 0.3, 0, 1))) * (e.h + 40);
+            if (e.timer > 0.4) { e.state = 'under'; e.timer = rnd(1, 2); e.hidden = true; }
+          }
+          break;
+        }
+        case 'skimmer': {
+          // rast auf dem Gleiter vorbei und feuert im Vorbeiflug
+          e.dirX = e.dirX || (dx > 0 ? 1 : -1);
+          e.x += e.dirX * 430 * dt;
+          const gy = this.surfaceY(e.x, this.cam.y + 100);
+          e.y = lerp(e.y, gy - 250 + Math.sin(e.t * 2.4) * 26, 1 - Math.pow(0.02, dt));
+          e.face = e.dirX;
+          if (e.x < this.cam.x - 200 || e.x > this.cam.x + W + 200) e.dirX = -e.dirX;
+          if (alive && Math.abs(dx) < 800 && (e.cd -= dt) <= 0) {
+            e.cd = rnd(1.6, 2.4);
+            for (let k = 0; k < 3; k++) this.pending.push({ t: k * 0.12, fn: () => {
+              if (e.dead) return;
+              const a = Math.atan2(this.player.y - e.y, this.player.x - e.x) + rnd(-0.05, 0.05);
+              this.enemyShoot(e.x, e.y + 6, a, 640, 'orb', '#ffb14a');
+            } });
+          }
+          if (Math.random() < 0.6) this.part({ x: e.x + e.dirX * 70, y: e.y + 16, vx: -e.dirX * rnd(100, 300), vy: rnd(-30, 60),
+            life: rnd(0.15, 0.35), size: rnd(8, 16), color: '#ff8a2a', kind: 'fire' });
+          break;
+        }
+        case 'thorn': {
+          // Dornenpflanze: öffnet sich und schießt einen Fächer aus Stacheln
+          e.vy = Math.min(1600, e.vy + P.grav * dt);
+          if (this.move(e, dt).ground) e.vy = 0;
+          e.face = dx > 0 ? 1 : -1;
+          e.charge = Math.max(0, (e.charge || 0) - dt);
+          if (alive && dist < 850 && (e.cd -= dt) <= 0) {
+            e.cd = rnd(2.2, 3);
+            e.charge = 0.5;
+            this.pending.push({ t: 0.5, fn: () => {
+              if (e.dead) return;
+              const a = Math.atan2(this.player.y - (e.y - 40), this.player.x - e.x);
+              for (let k = -2; k <= 2; k++) this.ebullets.push({ kind: 'thorn', x: e.x, y: e.y - 40,
+                vx: Math.cos(a + k * 0.14) * 760, vy: Math.sin(a + k * 0.14) * 760, r: 9, dmg: 12, life: 3, t: 0,
+                color: '#ffd27a' });
+              this.audio.enemyShot(false);
+            } });
+          }
+          break;
+        }
+        case 'mortar': {
+          // vierbeiniger Läufer, wirft Granaten im hohen Bogen mit Zielmarkierung
+          e.vy = Math.min(1600, e.vy + P.grav * dt);
+          if (e.onGround) {
+            const want = p.x - Math.sign(dx || 1) * 680;
+            e.face = dx > 0 ? 1 : -1;
+            e.vx = clamp((want - e.x) * 1.2, -120, 120);
+            if (!this.groundAhead(e, Math.sign(e.vx) || 1)) e.vx = 0;
+          }
+          const r = this.move(e, dt);
+          e.onGround = r.ground;
+          if (r.ground) e.vy = 0;
+          e.walk = (e.walk || 0) + dt * Math.abs(e.vx) / 30;
+          if (alive && dist < 1500 && (e.cd -= dt) <= 0) {
+            e.cd = rnd(2.4, 3.2);
+            const T2 = 1.5, tx = p.x + p.vx * 0.5;
+            const my = e.y - 60;
+            this.ebullets.push({ kind: 'shell', x: e.x, y: my, vx: (tx - e.x) / T2, vy: (this.surfaceY(tx, my) - my - 0.5 * 1500 * T2 * T2) / T2,
+              r: 16, dmg: 25, life: T2 + 1.5, g: 1500, t: 0, markX: tx, markY: this.surfaceY(tx, my), color: '#ffb14a' });
+            this.part({ x: e.x, y: my, life: 0.1, size: 120, color: '#ffb14a', kind: 'flash' });
+            this.audio.shot('grenade');
+          }
+          break;
+        }
         case 'boss': this.updateBoss(e, dt); break;
       }
       // Berührung
@@ -946,7 +1093,7 @@
     }
 
     damageEnemy(e, dmg, hx, hy, dx, dy, quiet, aoe) {
-      if (e.dead || e.intro) return;
+      if (e.dead || e.intro || e.hidden) return;
       // Wächter: der geschlossene Schild vorn hält Schüsse ab, Explosionen gehen durch
       if (e.type === 'sentinel' && !e.open && !aoe && dx * e.face < 0) {
         e.shieldHit = 1;
@@ -957,9 +1104,11 @@
         }
         return;
       }
-      if (e.type === 'boss' && e.core) {
-        const c = e.core;
-        if (Math.hypot(hx - (e.x + c.x), hy - (e.y + c.y)) < c.r) { dmg *= 1.6; e.crit = 0.25; }
+      if (e.type === 'boss') {
+        // Kern beziehungsweise Schlund: voller Schaden und Kerntreffer, sonst hält die Panzerung
+        const c = e.throat;
+        if (c && Math.hypot(hx - c.x, hy - c.y) < c.r) { dmg *= e.cfg.critMul || 1.6; e.crit = 0.25; }
+        else if (e.cfg.armor) dmg *= e.cfg.armor;
       }
       e.hp -= dmg;
       e.flash = 1;
@@ -1068,16 +1217,27 @@
 
     startBoss() {
       const L = this.L, B = L.boss, cfg = BOSSES[L.def.boss], R = RIGS[cfg.rig];
-      const e = this.addEnemy('boss', B.x + 120, B.y - R.stand, { intro: true, introT: 0, phase: 1, atk: null, atkT: 0,
+      const chain = R.kind === 'chain';
+      const lift = chain ? 0 : R.stand;
+      const e = this.addEnemy('boss', B.x + 120, B.y - lift, { intro: true, introT: 0, phase: 1, atk: null, atkT: 0,
         step: 0, rear: 0, recoil: 0,
-        cd: 3.5, baseY: B.y - R.stand, baseX: B.x + 120, cfg, R,
+        cd: 3.5, baseY: B.y - lift, baseX: B.x + 120, cfg, R,
         hp: this.opts.weak || cfg.hp, maxHp: this.opts.weak || cfg.hp });
-      // Trefferzone (Körper), Kern (mehr Schaden) und Auge relativ zur Hüfte; der Boss schaut nach links
-      Object.assign(e, { body: R.body, core: { x: -R.core.x, y: R.core.y, r: R.core.r }, eye: { x: -R.eye.x, y: R.eye.y },
+      // Trefferzone; bei den Zweibeinern zusätzlich Kern, Auge und Schulter relativ zur Hüfte (Blick nach links)
+      e.body = R.body;
+      if (!chain) Object.assign(e, { core: { x: -R.core.x, y: R.core.y, r: R.core.r }, eye: { x: -R.eye.x, y: R.eye.y },
         cannon: { x: -R.shoulder.x, y: R.shoulder.y } });
-      // Skelett: Hüfte, Beine mit Schrittzyklus, Arme zum Zielen und Schlagen
-      e.rig = { hipX: e.x, hipY: e.y, lean: 0, aim: 0, claw: 0.75, tail: 0, fall: 0, walk: 0, dir: 1,
-        feet: [{ x: 90, y: R.stand }, { x: -90, y: R.stand }] };
+      if (chain) {
+        // Leviathan: Kopf auf einer Bahn, die Segmente laufen hinterher
+        const fy = this.L.ph - 3 * 64;
+        e.worm = { x: B.x + 400, y: fy + 200, ang: -Math.PI / 2, speed: 0, mode: 'intro', t: 0,
+          path: [], mouth: 0, targetX: B.x, arm: 0.6, atk: null, atkT: 0, side: -1 };
+        e.baseY = fy;
+      } else {
+        // Skelett: Hüfte, Beine mit Schrittzyklus, Arme zum Zielen und Schlagen
+        e.rig = { hipX: e.x, hipY: e.y, lean: 0, aim: 0, claw: 0.75, tail: 0, fall: 0, walk: 0, dir: 1,
+          feet: [{ x: 90, y: R.stand }, { x: -90, y: R.stand }] };
+      }
       this.boss = e;
       this.lock = true;
       this.audio.bossAlarm();
@@ -1163,6 +1323,7 @@
         1 - Math.pow(0.02, dt));
       e.x = r.hipX;
       e.y = r.hipY;
+      e.throat = { x: r.hipX + R.core.x * face, y: r.hipY + R.core.y, r: R.core.r };
     }
 
     bossFootfall(e, at) {
@@ -1178,6 +1339,7 @@
     updateBoss(e, dt) {
       const p = this.player, A = this.L.arena, cfg = e.cfg, col = cfg.color;
       this.updateBossHits(e, dt);
+      if (e.R.kind === 'chain') return this.updateWorm(e, dt);
       this.animateRig(e, dt);
       if (!e.dying) p.x = Math.min(p.x, e.baseX + e.body.x0 + 60 - p.w / 2);
       if (e.intro) {
@@ -1356,6 +1518,193 @@
       }
     }
 
+    // ---------- Der Devourer: Kette aus Segmenten, die aus dem Sand bricht ----------
+
+    updateWorm(e, dt) {
+      const R = e.R, w = e.worm, p = this.player, A = this.L.arena, cfg = e.cfg;
+      const fy = e.baseY, col = cfg.color;
+      w.t += dt;
+      // Phasen
+      const hpk = e.hp / e.maxHp;
+      const phase = hpk > 0.66 ? 1 : hpk > 0.33 ? 2 : 3;
+      if (!e.dying && phase !== e.phase) {
+        e.phase = phase;
+        this.audio.bossRoar();
+        this.shake = 0.9; this.flash = 0.5; this.flashColor = col;
+        this.say(phase === 2 ? 'PHASE 2' : 'FINAL PHASE', col, 1.6);
+      }
+      const fast = phase === 3 ? 1.25 : phase === 2 ? 1.12 : 1;
+
+      if (e.dying) {
+        // Todeskampf: bäumt sich auf und stürzt in den Sand
+        w.speed = lerp(w.speed, 90, 1 - Math.pow(0.4, dt));
+        w.ang = turn(w.ang, e.dieT < 2 ? -Math.PI / 2 : Math.PI / 2, 1 - Math.pow(0.3, dt));
+        w.mouth = 1;
+      } else if (w.mode === 'intro') {
+        // Auftritt: bricht aus dem Sand, brüllt und taucht wieder ab
+        if (w.t < 1.2) { w.y = fy + 200; w.x = lerp(w.x, p.x + 700, 1 - Math.pow(0.1, dt)); this.wormMound(e, fy); }
+        else if (w.t < 1.35) { w.speed = 1000; w.ang = -Math.PI / 2; this.wormBurst(e, fy); }
+        else { w.speed = 820; w.ang += 0.95 * dt; w.mouth = clamp(1.6 - Math.abs(w.t - 2.2), 0, 1); }
+        if (w.t > 4.2) { w.mode = 'under'; w.t = 0; w.targetX = p.x; e.intro = false; }
+        if (w.t > 1.3 && w.t < 1.45) { this.audio.bossRoar(); this.shake = 1; }
+      } else if (w.mode === 'under') {
+        // unter dem Sand auf den Helden zu
+        w.speed = 0;
+        w.y = fy + 190;
+        w.ang = Math.sign(w.targetX - w.x) >= 0 ? 0 : Math.PI;
+        w.x += clamp(w.targetX - w.x, -1, 1) * 430 * fast * dt;
+        w.mouth = lerp(w.mouth, 0, 1 - Math.pow(0.01, dt));
+        this.wormMound(e, fy);
+        if (Math.abs(w.x - w.targetX) < 60 || w.t > 2.6) { w.mode = 'warn'; w.t = 0; this.audio.charge(0.6); }
+      } else if (w.mode === 'warn') {
+        // Vorwarnung: der Sand bebt an der Stelle
+        this.wormMound(e, fy);
+        this.shake = Math.max(this.shake, 0.3);
+        if (w.t > 0.65) {
+          w.mode = 'up'; w.t = 0;
+          w.side = p.x > w.x ? 1 : -1;
+          w.ang = -Math.PI / 2 + w.side * 0.4;
+          w.speed = 900 * fast;
+          e.atkDone = false;
+          this.wormBurst(e, fy);
+        }
+      } else if (w.mode === 'up') {
+        w.speed = 900 * fast;
+        w.ang += w.side * 0.5 * dt;
+        if (w.y < fy - 620) { w.mode = 'arc'; w.t = 0; }
+      } else if (w.mode === 'arc') {
+        // Bogen über die Arena, dabei greift er an
+        w.speed = 820 * fast;
+        w.ang += w.side * (0.95 + phase * 0.05) * dt;
+        if (!e.atkDone && w.t > 0.25) { e.atkDone = true; this.wormAttack(e, phase); }
+        if (w.y > fy + 60 && w.t > 0.6) {
+          w.mode = 'under'; w.t = 0;
+          w.targetX = clamp(p.x + rnd(-200, 200), A.x + 260, A.x + 1660);
+          this.wormBurst(e, fy);
+          this.audio.boom(2);
+        }
+      }
+      // Bahn integrieren und aufzeichnen
+      if (w.speed > 0) { w.x += Math.cos(w.ang) * w.speed * dt; w.y += Math.sin(w.ang) * w.speed * dt; }
+      w.x = clamp(w.x, A.x + 200, A.x + 1720);
+      const last = w.path[0];
+      if (!last || Math.hypot(last.x - w.x, last.y - w.y) > 10) w.path.unshift({ x: w.x, y: w.y });
+      if (w.path.length > 420) w.path.length = 420;
+      // Segmente auf der Bahn verteilen, daraus die Trefferkreise
+      const segs = this.wormSegments(e);
+      e.x = w.x; e.y = w.y;
+      e.hitCircles = [{ x: w.x, y: w.y, r: R.headR }].concat(segs.map(s => ({ x: s.x, y: s.y, r: R.segR })));
+      const mx = w.x + Math.cos(w.ang) * R.mouth.x * -1, my = w.y + Math.sin(w.ang) * R.mouth.x * -1;
+      e.mouthPos = { x: mx, y: my };
+      e.throat = { x: mx, y: my, r: R.core.r * (0.55 + 0.45 * w.mouth) };
+      e.armA = lerp(e.armA || 0.5, w.mouth > 0.5 ? -0.5 : 0.7, 1 - Math.pow(0.05, dt));
+      // Berührung: Kopf und Körper tun weh, solange sie über dem Sand sind
+      if (!p.dead && !e.dying) {
+        for (const c of e.hitCircles) {
+          if (c.y > fy + 40) continue;
+          if (Math.hypot(p.x - c.x, p.y - c.y) < c.r + 40) { this.hurtPlayer(25, Math.sign(p.x - c.x) || 1); break; }
+        }
+      }
+      // Sandfontänen und Feuer aus dem Maul beim Sturm
+      if (w.mouth > 0.6 && Math.random() < 0.5) this.part({ x: mx, y: my, vx: rnd(-80, 80), vy: rnd(-80, 80),
+        life: rnd(0.15, 0.35), size: rnd(10, 22), color: '#ff8a2a', kind: 'fire' });
+    }
+
+    // Segmentpositionen entlang der aufgezeichneten Bahn
+    wormSegments(e) {
+      const R = e.R, w = e.worm, out = [];
+      let want = R.spacing, acc = 0, i = 1;
+      for (let k = 1; k < w.path.length && out.length < R.segs; k++) {
+        const a = w.path[k - 1], b = w.path[k];
+        const d = Math.hypot(b.x - a.x, b.y - a.y);
+        while (acc + d >= want && out.length < R.segs) {
+          const t = (want - acc) / (d || 1);
+          const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+          const prev = out.length ? out[out.length - 1] : { x: w.x, y: w.y };
+          out.push({ x, y, ang: Math.atan2(prev.y - y, prev.x - x), s: Math.pow(R.taper, out.length + 1) });
+          want += R.spacing;
+        }
+        acc += d;
+      }
+      e.segs = out;
+      return out;
+    }
+
+    // Sandhügel und Staubfahne, während er unter dem Sand wandert
+    wormMound(e, fy) {
+      const w = e.worm;
+      e.mound = { x: w.x, y: fy };
+      if (Math.random() < 0.8) this.part({ x: w.x + rnd(-70, 70), y: fy - 6, vx: rnd(-120, 120), vy: rnd(-260, -60),
+        g: 1200, life: rnd(0.3, 0.7), size: rnd(5, 12), color: '#d8a24a', kind: 'goo' });
+      this.shake = Math.max(this.shake, 0.12);
+    }
+
+    // Durchbruch durch die Oberfläche
+    wormBurst(e, fy) {
+      const w = e.worm;
+      this.shake = Math.max(this.shake, 0.8);
+      this.rumble(0.8, 0.6, 300);
+      this.audio.slam();
+      this.ring(w.x, fy, 420, '#ffd27a');
+      this.dust(w.x, fy, 26);
+      for (let i = 0; i < 40; i++) this.part({ x: w.x + rnd(-90, 90), y: fy, vx: rnd(-500, 500), vy: rnd(-1100, -300),
+        g: 1600, life: rnd(0.5, 1.2), size: rnd(5, 14), color: pick(['#d8a24a', '#c08a3a', '#ffd27a']), kind: 'goo' });
+      this.debris(w.x, fy, 8, 'rock');
+    }
+
+    // Angriff im Bogen über der Arena
+    wormAttack(e, phase) {
+      const R = e.R, w = e.worm, p = this.player, A = this.L.arena, col = e.cfg.color;
+      const fy = e.baseY;
+      const pool = e.cfg.pool.slice(0, phase).flat();
+      let a;
+      do a = pick(pool); while (a === e.last && pool.length > 1);
+      e.last = a;
+      const mouth = () => e.mouthPos || { x: w.x, y: w.y };
+      if (a === 'spit') {
+        w.mouth = 1;
+        for (let k = 0; k < 5 + phase; k++) this.pending.push({ t: k * 0.12, fn: () => {
+          if (e.dead) return;
+          const m = mouth();
+          const ang = Math.atan2(p.y - m.y, p.x - m.x) + rnd(-0.25, 0.25);
+          this.enemyShoot(m.x, m.y, ang, 520 + phase * 40, 'orb', col);
+          this.part({ x: m.x, y: m.y, life: 0.1, size: 130, color: col, kind: 'flash' });
+        } });
+      } else if (a === 'strikes') {
+        const xs = [p.x];
+        for (let i = 0; i < 2 + phase; i++) xs.push(A.x + rnd(260, 1600));
+        for (const x of xs) this.strikes.push({ x, t: 0, warn: 1, dur: 0.4, hit: false, color: '#ffb14a' });
+        this.audio.charge(1);
+      } else if (a === 'brood') {
+        w.mouth = 1;
+        for (let i = 0; i < 2; i++) {
+          const m = mouth();
+          const s = this.addEnemy('sandworm', clamp(m.x + rnd(-200, 200), A.x + 200, A.x + 1700), fy - 85);
+          s.home = { x: s.x, y: fy };
+          s.state = 'under'; s.hidden = true; s.timer = rnd(0.3, 1);
+        }
+        this.audio.squish();
+      } else if (a === 'sweep' || a === 'beam') {
+        // Feuervorhang: er speit im Flug eine Kette von Brocken nach unten
+        w.mouth = 1;
+        for (let k = 0; k < 12; k++) this.pending.push({ t: k * 0.09, fn: () => {
+          if (e.dead) return;
+          const m = mouth();
+          this.ebullets.push({ kind: 'acid', x: m.x, y: m.y, vx: rnd(-60, 60), vy: 120, r: 15, dmg: 18, life: 4,
+            g: 1300, t: 0, color: '#ff8a2a' });
+        } });
+      } else if (a === 'rings') {
+        w.mouth = 1;
+        for (let n = 0; n < 2; n++) this.pending.push({ t: n * 0.5, fn: () => {
+          if (e.dead) return;
+          const m = mouth(), k = 16;
+          for (let i = 0; i < k; i++) this.enemyShoot(m.x, m.y, n * 0.2 + i * TAU / k, 400, 'orb', col);
+          this.ring(m.x, m.y, 180, col);
+        } });
+      }
+      this.audio.bossRoar();
+    }
+
     // Weltposition der Kanonenmündung am gezielten Arm
     bossMuzzle(e) {
       const R = e.R, r = e.rig, face = -1;
@@ -1409,11 +1758,13 @@
       this.hitstop = 0.25;
       this.flash = 1; this.flashColor = '#ffffff';
       this.rumble(1, 1, 2000);
+      if (e.R.kind === 'chain') { e.worm.mode = 'death'; e.hitCircles = null; }
       const n = this.L.last ? 40 : 26;
       for (let i = 0; i < n; i++) {
         this.pending.push({ t: i * 0.12 + rnd(0, 0.08), fn: () => {
-          const hb = this.hitbox(e);
-          const x = rnd(hb.x0, hb.x1), y = rnd(hb.y0, hb.y1);
+          let x, y;
+          if (e.segs && e.segs.length) { const s = pick(e.segs.concat([{ x: e.x, y: e.y }])); x = s.x + rnd(-40, 40); y = s.y + rnd(-40, 40); }
+          else { const hb = this.hitbox(e); x = rnd(hb.x0, hb.x1); y = rnd(hb.y0, hb.y1); }
           this.explode(x, y, rnd(90, 200), 0, { fx: rnd(1.2, 2.5), noDamage: true, color: queen && Math.random() < 0.5 ? '#8dff3a' : undefined });
           if (queen) this.gooBurst(x, y, 14);
           else this.debris(e.x, e.y, 3, 'boss');
@@ -1452,7 +1803,7 @@
           }
           if (Math.random() < 0.5) this.part({ x: b.x, y: b.y, vx: 0, vy: -20, life: 0.4, size: 6, color: '#888', kind: 'smoke' });
           let boom = b.life <= 0;
-          for (const e of this.enemies) if (!e.dead && !e.intro && inBox(b.x, b.y, this.hitbox(e), b.r)) boom = true;
+          for (const e of this.enemies) if (!e.dead && !e.intro && this.hitTest(e, b.x, b.y, b.r)) boom = true;
           if (boom) { b.life = 0; this.explode(b.x, b.y, 230, 110, { fx: 2.4, noPlayer: true }); }
           continue;
         }
@@ -1487,7 +1838,7 @@
         }
         for (const e of this.enemies) {
           if (e.dead || e.intro) continue;
-          if (inBox(b.x, b.y, this.hitbox(e), b.r)) {
+          if (this.hitTest(e, b.x, b.y, b.r)) {
             const sp = Math.hypot(b.vx, b.vy) || 1;
             if (b.kind === 'rocket') { this.explode(b.x, b.y, 130, 45, { fx: 1.3, noPlayer: true }); this.damageEnemy(e, b.dmg, b.x, b.y, b.vx / sp, b.vy / sp); }
             else {

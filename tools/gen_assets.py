@@ -17,7 +17,8 @@ SEEDS = [11, 23]
 EXTRA_SEEDS = {"hero_torso": [11, 23, 37, 41], "hero_arm": [11, 23, 37, 41], "hero_leg": [11, 23, 37, 41],
                "hero_full": [11, 23, 37, 41], "boss_torso": [11, 23, 37], "boss_cannon": [11, 23, 37],
                "boss_claw": [11, 23, 37], "boss_leg": [11, 23, 37], "queen_torso": [11, 23, 37],
-               "queen_scythe": [11, 23, 37], "queen_leg": [11, 23, 37], "queen_tail": [11, 23]}
+               "queen_scythe": [11, 23, 37], "queen_leg": [11, 23, 37], "queen_tail": [11, 23],
+               "dev_maw": [11, 23, 37], "dev_seg": [11, 23, 37], "dev_arm": [11, 23, 37]}
 
 GREEN = ("highly detailed sci-fi video game sprite, polished 3D render, sharp clean silhouette, centered, "
          "the whole object fully visible with margin around it, isolated on a flat uniform pure bright green "
@@ -122,6 +123,39 @@ ASSETS = {
     "queen_tail": ("a long segmented alien queen tail with a glowing magenta stinger at the tip, glossy black and "
                    "purple chitin, stretched out straight horizontally, tip pointing to the right, exact side view, "
                    "nothing else", GREEN, 1536, 768),
+    # Level 4: The Outbacks (Wüste, in der das Mutterschiff abgestürzt ist)
+    "sandworm": ("the head and neck of an armored sand worm creature bursting upwards out of the ground, round "
+                 "fanged maw wide open, sand colored chitin with dark stripes and glowing orange throat, facing to "
+                 "the left, exact side view profile", GREEN, 1024, 1024),
+    "skimmer": ("an alien raider riding a sleek hover speeder bike, lean armored rider with a plasma carbine, the "
+                "bike with glowing orange thrusters and sand scoops, facing to the left, exact side view profile",
+                GREEN, 1536, 768),
+    "thorn": ("a big alien desert plant turret, thick barbed stalk growing from the ground with a bulbous pod that "
+              "opens into a spiked mouth, sand and olive colored with glowing orange veins, side view",
+              GREEN, 1024, 1024),
+    "mortar": ("a four legged alien mortar walker machine, armored sand colored hull with a short thick mortar tube "
+               "pointing up and glowing orange lights, facing to the left, exact side view profile", GREEN, 1536, 1024),
+    # Der Endgegner von Level 4 in Einzelteilen: ein riesiger Sandleviathan
+    "dev_maw": ("the head of a colossal armored sand leviathan, huge round maw ringed with fangs and a glowing "
+                "orange throat, heavy sand colored armor plates with glowing orange seams, curved horns, facing to "
+                "the left, exact side view profile", GREEN, 1024, 1024),
+    "dev_seg": ("a single armored body segment of a colossal sand leviathan, thick ring of heavy sand colored plates "
+                "with glowing orange seams and short spikes, exact side view", GREEN, 1024, 1024),
+    "dev_arm": ("a huge clawed arm of a sand leviathan, armored sand colored chitin with glowing orange seams, from "
+                "the round shoulder joint to the long claw tips, stretched straight out horizontally, claws pointing "
+                "to the right, exact side view", GREEN, 1536, 768),
+    # Wüste: Kacheln, Hintergrund, Kulissen
+    "sand": ("alien desert ground texture, red orange sand with small dark pebbles, cracked dry crust and thin "
+             "wind ripples, " + TILE, "", 1024, 1024),
+    "rust": ("rusted crashed alien hull plating texture, burnt violet and ochre metal panels with rivets, scorch "
+             "marks and drifted sand, " + TILE, "", 1024, 1024),
+    "desert_bg": ("a vast alien desert panorama at sunset, endless red orange dunes, two suns low in a dusty amber "
+                  "sky, a colossal crashed alien mothership wreck smoking on the far horizon, heat haze, cinematic, "
+                  "wide angle", "no text, no frame, no people", 1536, 864),
+    "dunes": ("a row of red orange sand dunes with sparse dry alien shrubs and bones, exact side view, wide "
+              "panoramic", GREEN, 1536, 640),
+    "debris": ("a long field of crashed alien spaceship wreckage half buried in sand, broken violet hull plates, "
+               "bent beams and a toppled engine nacelle, exact side view, wide panoramic", GREEN, 1536, 640),
     # Level 2: Hive Caverns
     "spitter": ("a squat biomechanical alien spitter creature with a swollen glowing acid sac on its back, dark purple "
                 "armored hide, wide open fanged mouth and glowing green eyes, crouching on short legs, facing to the "

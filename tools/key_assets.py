@@ -49,13 +49,24 @@ SPRITES = {
     "queen_scythe": ("queen_scythe_23", 900, 450),
     "queen_leg": ("queen_leg_37", 380, 760),
     "queen_tail": ("queen_tail_23", 900, 450),
+    # Level 4: The Outbacks
+    "sandworm": ("sandworm_23", 320, 360),
+    "skimmer": ("skimmer_23", 420, 220),
+    "thorn": ("thorn_11", 260, 320),
+    "mortar": ("mortar_11", 460, 320),
+    "dev_maw": ("dev_maw_23", 700, 700),
+    "dev_seg": ("dev_seg_23", 500, 500),
+    "dev_arm": ("dev_arm_11", 800, 400),
+    "dunes": ("dunes_23", 1536, 640),
+    "debris": ("debris_11", 1536, 640),
     "fungi": ("fungi_11", 1536, 640),
     "machinery": ("machinery_11", 1536, 640),
 }
 ADDITIVE = {"explosion": ("explosion_11", 512), "plasma": ("plasma_11", 512)}
 BACKDROPS = {"sky": ("sky_11", 1920), "title": ("title_23", 1920), "cave_bg": ("cave_bg_11", 1920),
-             "ship_bg": ("ship_bg_11", 1920)}
-TEXTURES = {"ground": "ground_23", "metal": "metal_11", "cave": "cave_11", "hull": "hull_23"}
+             "ship_bg": ("ship_bg_11", 1920), "desert_bg": ("desert_bg_11", 1920)}
+TEXTURES = {"ground": "ground_23", "metal": "metal_11", "cave": "cave_11", "hull": "hull_23",
+            "sand": "sand_11", "rust": "rust_23"}
 
 
 def smoothstep(a, b, x):

@@ -28,6 +28,10 @@
       arm2: { a: { x: 0.08, y: 0.50 }, b: { x: 0.97, y: 0.50 } },
       arm2Front: true,
     },
+    worm: {
+      head: { a: { x: 0.85, y: 0.5 }, b: { x: 0.05, y: 0.5 } },   // Nacken -> Maul (Kopf zeigt nach links)
+      arm: { a: { x: 0.08, y: 0.50 }, b: { x: 0.97, y: 0.50 } },
+    },
     queen: {
       torso: { hip: { x: 0.45, y: 0.97 } },
       leg: { hip: { x: 0.45, y: 0.06 }, knee: { x: 0.85, y: 0.40 }, ankle: { x: 0.20, y: 0.68 }, cut: 0.42 },
@@ -396,9 +400,10 @@
               c.globalCompositeOperation = 'source-over';
             }
           } else if (t === 4) {
+            const ac = th.acid || { top: '#9dff4a', bottom: '#1d5a14', glow: '#7dff6a' };
             const top = ty > 0 && L.tiles[(ty - 1) * L.w + tx] !== 4;
             const gr = c.createLinearGradient(0, py, 0, py + T);
-            gr.addColorStop(0, top ? '#9dff4a' : '#4fb82a'); gr.addColorStop(1, '#1d5a14');
+            gr.addColorStop(0, top ? ac.top : ac.bottom); gr.addColorStop(1, ac.bottom);
             c.fillStyle = gr;
             if (top) {
               c.beginPath();
@@ -407,8 +412,8 @@
               c.lineTo(px + T, py + T);
               c.fill();
               c.globalCompositeOperation = 'lighter';
-              this.gl(this.glows.green, px + T / 2, py + 8, 140, 0.25);
-              if (Math.sin(g.time * 2.3 + tx * 7.1) > 0.97) this.gl(this.glows.green, px + T / 2, py + 12, 40, 0.8);
+              this.gl(this.glowOf(ac.glow), px + T / 2, py + 8, 140, 0.25);
+              if (Math.sin(g.time * 2.3 + tx * 7.1) > 0.97) this.gl(this.glowOf(ac.glow), px + T / 2, py + 12, 40, 0.8);
               c.globalAlpha = 1;
               c.globalCompositeOperation = 'source-over';
             } else c.fillRect(px, py, T, T);
@@ -795,6 +800,48 @@
           this.hpBar(e, e.y - e.h * 0.7);
           break;
         }
+        case 'sandworm': {
+          if (e.hidden) {            // unter dem Sand: nur ein Hügel und Staub
+            const gy = e.y - 110;
+            c.fillStyle = '#c99a4a';
+            c.beginPath();
+            c.moveTo(e.x - 70, gy + 2);
+            c.quadraticCurveTo(e.x, gy - 34 - Math.sin(g.time * 9) * 5, e.x + 70, gy + 2);
+            c.fill();
+            break;
+          }
+          this.spr('sandworm', e.x, e.y, e.h * 1.25, { flip: e.face > 0, flash: fl });
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glows.orange, e.x, e.y - e.h * 0.3, 90, 0.5);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          break;
+        }
+        case 'skimmer':
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glows.orange, e.x + e.face * 60, e.y + 14, 130, 0.5);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          this.spr('skimmer', e.x, e.y, e.h * 1.5, { flip: e.face > 0, rot: clamp(-e.vy / 2000, -0.2, 0.2), flash: fl });
+          break;
+        case 'thorn': {
+          const k = e.charge > 0 ? 1 - e.charge / 0.5 : 0;
+          this.spr('thorn', e.x, e.y + e.h / 2, e.h * 1.3, { ay: 1, flip: e.face > 0,
+            sx: 1 + 0.15 * k, sy: 1 - 0.1 * k, flash: fl });
+          if (e.charge > 0) {
+            c.globalCompositeOperation = 'lighter';
+            this.gl(this.glows.orange, e.x, e.y - 40, 60 + 120 * k, 0.6);
+            c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          }
+          break;
+        }
+        case 'mortar': {
+          const bob = Math.sin(e.walk || 0) * 5;
+          this.spr('mortar', e.x, e.y + bob, e.h * 1.35, { flip: e.face > 0, flash: fl });
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glows.orange, e.x, e.y - 50, 70 + (e.cd < 0.5 ? 90 * (1 - e.cd / 0.5) : 0), 0.5);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          this.hpBar(e, e.y - e.h * 0.7);
+          break;
+        }
         case 'pod': {
           const k = Math.min(1, (e.pulse || 0) * 3), s = Math.sin(e.t * 4) * 0.04 + (1 - k) * 0.15;
           this.spr('pod', e.x, e.y + e.h / 2, e.h * 1.3, { ay: 1, sx: 1 + s, sy: 1 - s * 0.6, flash: fl });
@@ -910,7 +957,7 @@
     drawBoss(g, e) {
       const c = this.c, cfg = e.cfg;
       const rage = e.phase === 3 || cfg.rage ? 0.5 + 0.5 * Math.sin(g.time * 10) : 0;
-      if (e.rig) return this.drawBossParts(g, e, rage);
+      if (e.rig || e.worm) return this.drawBossParts(g, e, rage);
       c.fillStyle = '#402050';
       const b = g.hitbox(e);
       c.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);   // Notbehelf, falls Teile fehlen
@@ -919,6 +966,7 @@
     // Zusammengesetzter Boss mit Leuchtpunkten, Zorn-Färbung und Schockwellen
     drawBossParts(g, e, rage) {
       const c = this.c, cfg = e.cfg, R = e.R, rg = e.rig, face = -1;
+      if (R.kind === 'chain') return this.drawWorm(g, e, rage);
       const col = this.glowOf(cfg.color);
       const at = (o) => ({ x: rg.hipX + o.x * face + (e.kickX || 0), y: rg.hipY + o.y + (e.kickY || 0) });
       const core = at(R.core), eye = at(R.eye);
@@ -957,6 +1005,77 @@
         this.gl(this.glowOf(w.color || '#9dff4a'), w.x, w.y - 30, 180, 0.7);
         c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       }
+    }
+
+    // Der Devourer: Segmentkette auf der Bahn des Kopfes, Kopf zeigt in Fahrtrichtung
+    drawWorm(g, e, rage) {
+      const c = this.c, R = e.R, w = e.worm, I = this.img, F = BOSS.worm;
+      const col = this.glowOf(e.cfg.color);
+      const fy = e.baseY;
+      const flash = Math.max(e.hitFlash || 0, e.dying ? 0.25 + 0.25 * Math.sin(g.time * 30) : 0);
+      // unter dem Sand: nur ein wandernder Hügel
+      if (w.y > fy + 120 && e.mound && !e.dying) {
+        const m = e.mound;
+        c.fillStyle = '#c99a4a';
+        c.beginPath();
+        c.moveTo(m.x - 150, m.y + 4);
+        c.quadraticCurveTo(m.x, m.y - 74 - Math.sin(g.time * 8) * 8, m.x + 150, m.y + 4);
+        c.fill();
+        c.fillStyle = 'rgba(0,0,0,0.25)';
+        c.beginPath();
+        c.moveTo(m.x - 150, m.y + 4); c.quadraticCurveTo(m.x + 20, m.y - 30, m.x + 150, m.y + 4); c.fill();
+      }
+      const segs = e.segs || [];
+      const segIm = I[R.parts.seg], headIm = I[R.parts.head], armIm = I[R.parts.arm];
+      if (!segIm || !headIm) return;
+      // Segmente von hinten nach vorn
+      for (let i = segs.length - 1; i >= 0; i--) {
+        const s = segs[i], h = R.segH * s.s;
+        const wdt = h * segIm.width / segIm.height;
+        c.save();
+        c.translate(s.x, s.y);
+        c.rotate(s.ang);
+        c.scale(0.5, 1.05);                       // der Ring wird zur Panzerplatte im Profil
+        c.drawImage(segIm, -wdt / 2, -h / 2, wdt, h);
+        if (flash > 0 && this.white[R.parts.seg]) {
+          c.globalAlpha = 0.7 * flash;
+          c.drawImage(this.white[R.parts.seg], -wdt / 2, -h / 2, wdt, h);
+        }
+        c.restore();
+      }
+      // Arme am vordersten Segment
+      if (armIm && segs.length) {
+        const s = segs[0];
+        for (const side of [1, -1]) {
+          c.save();
+          c.translate(s.x, s.y);
+          this.piece(armIm, F.arm.a, F.arm.b, 0, 0, w.ang + side * (0.8 + (e.armA || 0)) , R.armLen * (side > 0 ? 1 : 0.92));
+          c.restore();
+        }
+      }
+      // Kopf in Fahrtrichtung, das Sprite zeigt nach links
+      const h = R.headH, wd = h * headIm.width / headIm.height;
+      c.save();
+      c.translate(w.x, w.y);
+      c.rotate(w.ang - Math.PI);
+      if (Math.cos(w.ang) > 0) c.scale(1, -1);
+      const open = 0.9 + 0.25 * (w.mouth || 0);
+      c.scale(open, 1 + 0.12 * (w.mouth || 0));
+      c.drawImage(headIm, -wd / 2, -h / 2, wd, h);
+      if (flash > 0 && this.white[R.parts.head]) {
+        c.globalAlpha = 0.75 * flash;
+        c.drawImage(this.white[R.parts.head], -wd / 2, -h / 2, wd, h);
+        c.globalAlpha = 1;
+      }
+      c.restore();
+      // Schlund: die Schwachstelle glüht, beim Speien besonders hell
+      const m = e.mouthPos || { x: w.x, y: w.y };
+      c.globalCompositeOperation = 'lighter';
+      this.gl(col, m.x, m.y, 150 + 220 * (w.mouth || 0) + 30 * Math.sin(g.time * 8), 0.5 + 0.4 * (w.mouth || 0));
+      if (e.crit > 0) this.gl(this.glows.gold, m.x, m.y, 240 * Math.min(1, e.crit * 4), Math.min(1, e.crit * 4));
+      for (const s of segs) this.gl(col, s.x, s.y, 90 * s.s, 0.18 + 0.1 * rage);
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      this.bossWaves(g);
     }
 
     drawStrikes(g) {
@@ -1043,6 +1162,34 @@
       }
       for (const b of g.ebullets) {
         const col = b.color || '#ff4a5a';
+        if (b.kind === 'thorn') {           // Stachel
+          c.globalCompositeOperation = 'source-over';
+          c.globalAlpha = 1;
+          c.save(); c.translate(b.x, b.y); c.rotate(Math.atan2(b.vy, b.vx));
+          c.fillStyle = '#ffe6b0';
+          c.beginPath(); c.moveTo(16, 0); c.lineTo(-10, 5); c.lineTo(-10, -5); c.fill();
+          c.restore();
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glows.orange, b.x, b.y, 36, 0.5);
+          continue;
+        }
+        if (b.kind === 'shell') {            // Mörsergranate mit Zielmarkierung am Boden
+          c.globalCompositeOperation = 'lighter';
+          const k = 0.4 + 0.3 * Math.sin(g.time * 16);
+          c.globalAlpha = k;
+          c.strokeStyle = '#ff6a3a'; c.lineWidth = 4;
+          c.beginPath(); c.ellipse(b.markX, b.markY - 6, 80, 22, 0, 0, TAU); c.stroke();
+          c.beginPath(); c.ellipse(b.markX, b.markY - 6, 40, 11, 0, 0, TAU); c.stroke();
+          c.globalCompositeOperation = 'source-over';
+          c.globalAlpha = 1;
+          c.save(); c.translate(b.x, b.y); c.rotate(Math.atan2(b.vy, b.vx));
+          c.fillStyle = '#3a3026'; c.fillRect(-16, -8, 32, 16);
+          c.fillStyle = '#ffb14a'; c.fillRect(-20, -5, 6, 10);
+          c.restore();
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glows.orange, b.x, b.y, 50, 0.6);
+          continue;
+        }
         if (b.kind === 'bomb') {
           c.globalCompositeOperation = 'source-over';
           c.globalAlpha = 1;

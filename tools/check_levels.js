@@ -18,6 +18,10 @@ L.LEVELS.forEach((def, i) => {
       if (up === 0) { console.log(`L${i + 1} Lasertor ohne Decke bei ${tx}`); bad++; }
     }
   }
+  // Löcher in der untersten Reihe (entstehen, wenn eine Zeile im Abschnitt zu kurz ist)
+  for (let x = 0; x < lv.w; x++) {
+    if (!L.SOLID[at(x, lv.h - 1)]) { console.log(`L${i + 1} Loch im Boden bei Spalte ${x}`); bad++; break; }
+  }
   const sx = Math.floor(lv.start.x / T), sy = Math.round(lv.start.y / T);
   if (!L.SOLID[at(sx, sy)]) { console.log(`L${i + 1} Start ohne Boden`); bad++; }
   if (!lv.arena || !lv.boss) { console.log(`L${i + 1} ohne Arena oder Boss`); bad++; }

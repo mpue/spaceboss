@@ -2,13 +2,15 @@
 
 Run-and-Gun-Jump'n'Run im Browser, im Stil von Hypersense: polierte 3D-Sprites aus dem lokalen ComfyUI,
 Orbitron-HUD, viel Leuchten, Funken, Rauch und Explosionen. Ein **muskulöser Astronaut** im orange-weißen
-Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch drei Level bis ins Mutterschiff.
+Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch vier Level bis in die Wüste, in der
+das Mutterschiff zerschellt ist.
 
 | Level | Schauplatz | Boss |
 |---|---|---|
 | 1 **CRASH SITE** | Planetenoberfläche: Säuregruben, Bunker, Felstürme | **Spaceboss** – wird zurückgeschlagen und zieht sich zurück |
 | 2 **HIVE CAVERNS** | organische Alien-Höhlen mit Säureflüssen und Brutkammern | **Hive Queen** |
 | 3 **MOTHERSHIP** | im Inneren des Mutterschiffs, Lasertore und Aufzugsschächte | **Spaceboss in der Endform** |
+| 4 **THE OUTBACKS** | rote Wüste mit Treibsand, Wrackfeldern und Sandsturm, zwei Sonnen am Horizont | **The Devourer**, ein Sandleviathan |
 
 Punkte, Leben, Waffen und Granaten wandern von Level zu Level mit.
 
@@ -42,8 +44,8 @@ node server.js
 
 Dann <http://localhost:5190> öffnen. Die Musik liegt in `music/`. Welcher Song wo läuft, steht in `LEVELS` in `public/js/level.js`: gesucht wird
 jeweils ein Namensteil („metal man“, „king of steel“), sonst nimmt das Spiel den ersten Song im Ordner.
-Level 1 und 3 laufen auf *Metal man*, Level 2 auf *King of steel*, und zum Boss wird jeweils auf den anderen
-Song gewechselt.
+Level 1 und 3 laufen auf *Metal man*, Level 2 und 4 auf *King of steel*, und zum Boss wird jeweils auf den
+anderen Song gewechselt.
 
 ## Steuerung
 
@@ -111,16 +113,21 @@ Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz dr
 | Bomben-Untertasse | zieht oben mit und wirft Bomben |
 | Schild-Wächter | sein Frontschild hält Schüsse ab, nur beim Feuern ist er offen – Granaten und Raketen treffen ihn trotzdem |
 | Lasertor | Falle im Mutterschiff: schaltet im Takt an und aus |
+| Sandwurm | gräbt sich unter dem Sand heran (nur ein Hügel ist zu sehen) und bricht unter dem Helden heraus |
+| Gleiterreiter | rast auf dem Hover-Bike vorbei und feuert im Vorbeiflug |
+| Dornenpflanze | reißt ihren Schlund auf und spuckt einen Fächer aus Stacheln |
+| Mörserläufer | vierbeiniger Walker, wirft Granaten im hohen Bogen; ein Ring am Boden zeigt den Einschlag an |
 
-Alle Bosse haben drei Phasen und einen Kern, der 60 % mehr Schaden nimmt:
+Alle Bosse haben drei Phasen und einen Kern beziehungsweise Schlund, der deutlich mehr Schaden nimmt:
 
 | Boss | Angriffe |
 |---|---|
 | **Spaceboss** | Fächer aus der Armkanone, Augen-Salven, Bodenschockwellen (drüberspringen), Orbitalschläge mit Vorwarnung, Drohnen-Nachschub, Ringsalven |
 | **Hive Queen** | Säureregen über die ganze Arena, Fächer, frisch gelegte Krabbler, Fledermausschwärme, Schockwellen, Ringsalven |
 | **Endform** | alles davon, schneller, dazu ein waagrechter Laser: tief heißt drüberspringen, hoch heißt ducken (die Warnung sagt an, was) |
+| **The Devourer** | wandert als Hügel unter dem Sand heran, bricht mit Vorwarnung heraus und fliegt im Bogen über die Arena. Dabei speit er Feuerbrocken, lässt Sandfontänen aufsteigen, spuckt Sandwürmer aus und feuert Ringsalven. Sein Panzer schluckt 55 % des Schadens, voll trifft nur der glühende Schlund (dann 2,4-facher Schaden) |
 
-**Beide Bosse sind wie der Held aus Einzelteilen zusammengesetzt** und haben ein echtes Skelett: Die Hüfte
+**Alle Bosse sind wie der Held aus Einzelteilen zusammengesetzt.** Die beiden Zweibeiner haben ein Skelett: Die Hüfte
 ist der Nullpunkt, beide Beine werden am Knie geteilt und über Zwei-Knochen-IK auf ihre Fußpunkte gerechnet
 (umgekehrtes Knie), die Arme drehen sich um die Schulter. Sie **laufen** dem Helden mit einem Schrittzyklus
 entgegen: Standbein schiebt, Schwungbein hebt ab, bei jedem Aufsetzen staubt es, die Kamera wackelt und ein
@@ -131,6 +138,7 @@ beim Feuern zurück und brechen im Tod in die Knie.
 |---|---|---|
 | **Spaceboss** (auch die Endform) | `boss_torso`, `boss_cannon`, `boss_claw`, `boss_leg` | der Kanonenarm zielt auf den Helden, die Mündung sitzt am Ende des Laufs; der Klauenarm holt aus und drischt beim Schlag zu |
 | **Hive Queen** | `queen_torso`, `queen_scythe`, `queen_leg`, `queen_tail` | zwei Sichelklauen (eine hinter, eine vor dem Körper), die Säure kommt aus dem Maul, der Schwanz schwingt gegen die Laufrichtung aus |
+| **The Devourer** | `dev_maw`, `dev_seg`, `dev_arm` | kein Skelett, sondern eine Kette: der Kopf fliegt eine Bahn, elf Segmente laufen auf dieser Bahn hinterher und werden nach hinten kleiner. Getroffen wird er über Kreise statt über ein Rechteck |
 
 Die Maße der Skelette stehen in `RIGS` in `game.js`, die Ansatzpunkte in den Bildern (Hüfte, Knie, Knöchel,
 Schulter, Mündung) in `BOSS` in `render.js`. Ein neuer Boss braucht nur einen Eintrag in beiden.
@@ -144,14 +152,15 @@ Schaden, werden golden dargestellt und mit „CRIT!“ beschriftet.
 
 `?play=1` (Titel überspringen), `?level=2` (Level wählen), `?zoom=1.1&on=boss` (Kamera auf den Boss), `?god=1` (unverwundbar), `?weak=1` (Boss mit
 400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?pad=1` (Gamepad-Testanzeige), `?zoom=3` (Kamera um den Helden vergrößern,
-zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 356, 231 und 235.
-Zum Beispiel <http://localhost:5190/?play=1&god=1&level=3&at=232> für das Finale.
+zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 354, 231, 235 und 286.
+Zum Beispiel <http://localhost:5190/?play=1&god=1&level=4&at=283> für das Finale.
 
 Im laufenden Spiel liegt der Spielzustand als `window.SB` in der Konsole (`SB.player.hp`, `SB.boss.hp`,
 `SB.ease` …), praktisch zum Nachjustieren. `window.game` ist dagegen das Canvas-Element.
 
 `node tools/check_levels.js` prüft die Level auf Bau-Fehler: Abschnitte mit zu vielen Zeilen, Gegner oder
-Checkpoints ohne Boden unter sich, Deckentürme ohne Decke, Lasertore ohne Decke, fehlende Arena.
+Checkpoints ohne Boden unter sich, Deckentürme ohne Decke, Lasertore ohne Decke, Löcher in der untersten
+Bodenreihe (entstehen, wenn eine Zeile im Abschnitt zu kurz ist) und fehlende Arena.
 
 ## Grafiken
 
