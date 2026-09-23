@@ -47,6 +47,10 @@
     skimmer: { w: 200, h: 90, hp: 55, score: 300, dmg: 20, coins: 3 },
     thorn: { w: 110, h: 150, hp: 55, score: 200, flesh: true, dmg: 15, coins: 2 },
     mortar: { w: 220, h: 150, hp: 180, score: 600, dmg: 20, coins: 6 },
+    leech: { w: 110, h: 70, hp: 35, score: 150, flesh: true, dmg: 15, coins: 1 },
+    stingfly: { w: 100, h: 90, hp: 20, score: 150, flesh: true, dmg: 12, coins: 1 },
+    sporepod: { w: 120, h: 150, hp: 65, score: 250, flesh: true, dmg: 12, coins: 3 },
+    mudhulk: { w: 210, h: 160, hp: 240, score: 700, flesh: true, dmg: 25, coins: 7 },
     boss: { w: 440, h: 600, hp: 4200, score: 25000, dmg: 30, coins: 60 },
   };
 
@@ -84,6 +88,17 @@
       mouth: { x: 234, y: -291 },        // aus dem Maul kommt die Säure
       body: { x0: -230, y0: -510, x1: 230, y1: 300 },
     },
+    // Die Rotmother: fetter Leib mit zwei Tentakeln, die als Seil gerechnet werden
+    rot: {
+      kind: 'tentacle',
+      parts: { body: 'mom_body', seg: 'mom_seg', tip: 'mom_tip' },
+      bodyH: 560, segs: 9, segLen: 96, segH: 120, tipH: 150,
+      shoulder: [{ x: -40, y: -210 }, { x: 60, y: -120 }],   // Ansatz der Tentakel (Blick nach links)
+      mouth: { x: -210, y: -170 },
+      core: { x: 60, y: 60, r: 120 },                        // Eiersack: die Schwachstelle
+      body: { x0: -250, y0: -330, x1: 250, y1: 240 },
+      sink: 300,                                             // wie tief sie beim Abtauchen verschwindet
+    },
     // Der Devourer: eine Kette aus Segmenten, die dem Kopf hinterherläuft
     worm: {
       kind: 'chain',
@@ -115,6 +130,10 @@
       armor: 0.45, critMul: 2.4,                       // Panzerung: nur der Schlund nimmt vollen Schaden
       pool: [['spit', 'strikes'], ['brood', 'beam', 'spit'], ['rings', 'beam', 'strikes']],
       intro: 'THE SAND IS MOVING', down: 'THE DEVOURER FALLS' },
+    rotmother: { name: 'THE ROTMOTHER', rig: 'rot', hp: 6400, score: 120000, color: '#c8ff5a', minion: 'stingfly',
+      armor: 0.6, critMul: 2.2,
+      pool: [['whip', 'spit'], ['sweep', 'spores', 'brood'], ['whip', 'spit', 'sweep', 'spores']],
+      intro: 'SOMETHING STIRS IN THE WATER', down: 'THE ROTMOTHER ROTS' },
   };
 
   class Game {
@@ -136,6 +155,7 @@
       this.pickups = [];
       this.floaters = [];
       this.decals = [];
+      this.clouds = [];             // Sporenwolken (Sumpf)
       this.waves = [];              // Boss-Schockwellen
       this.strikes = [];            // Boss-Orbitalschläge
       this.checks = [];
@@ -272,9 +292,13 @@
           const ty = Math.floor((a.y - hh) / T);
           for (let tx = x0; tx <= x1; tx++) if (L.SOLID[this.tileAt(tx, ty)]) { a.y = (ty + 1) * T + hh + 0.01; res.ceil = true; break; }
         }
-        // Säure: irgendeine Kachel unter den Füßen
+        // Säure und Wasser: Kacheln unter den Füßen beziehungsweise auf Hüfthöhe
         const fy = Math.floor((a.y + hh - 6) / T);
-        for (let tx = x0; tx <= x1; tx++) if (this.tileAt(tx, fy) === 4) res.acid = true;
+        const my = Math.floor(a.y / T);
+        for (let tx = x0; tx <= x1; tx++) {
+          if (this.tileAt(tx, fy) === 4) res.acid = true;
+          if (this.tileAt(tx, fy) === 7 || this.tileAt(tx, my) === 7) res.water = true;
+        }
       }
       return res;
     }
@@ -330,6 +354,7 @@
       this.enemies = this.enemies.filter(e => !e.dead && e.x > this.cam.x - 1400);
       this.updateBullets(dt);
       this.updateEnemyBullets(dt);
+      this.updateClouds(dt);
       this.updateBossFx(dt);
       this.updatePickups(dt);
       this.updateParts(dt);
@@ -475,7 +500,7 @@
       }
 
       // Dash
-      if (pr.dash && p.dashCd <= 0 && (p.onGround || p.airDash)) {
+      if (pr.dash && p.dashCd <= 0 && !p.wet && (p.onGround || p.airDash)) {
         const dir = input.left ? -1 : input.right ? 1 : p.face;
         p.dashT = P.dashT; p.dashCd = P.dashCd; p.dashDir = dir;
         if (!p.onGround) p.airDash = false;
@@ -491,7 +516,7 @@
         p.vy = Math.min(p.vy, 0) * 0.5;
         p.afterimages.push({ x: p.x, y: p.y, face: p.face, aim: p.aim, walk: p.walk, crouch: p.crouch, t: 0 });
       } else {
-        const target = p.crouch ? 0 : mv * P.run;
+        const target = (p.crouch ? 0 : mv * P.run) * (p.wet ? 0.6 : 1);
         const acc = p.onGround ? P.accG : P.accA;
         if (p.vx < target) p.vx = Math.min(target, p.vx + acc * dt);
         else if (p.vx > target) p.vx = Math.max(target, p.vx - acc * dt);
@@ -504,7 +529,7 @@
       p.jumpBuf = Math.max(0, p.jumpBuf - dt);
       p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
       if (p.jumpBuf > 0 && p.coyote > 0) {
-        p.vy = -P.jump; p.jumpBuf = 0; p.coyote = 0; p.onGround = false;
+        p.vy = -P.jump * (p.wet ? 0.85 : 1); p.jumpBuf = 0; p.coyote = 0; p.onGround = false;
         this.audio.jump(false);
         this.dust(p.x, p.y + p.h / 2, 10);
       } else if (p.jumpBuf > 0 && p.jets > 0 && !p.onGround) {
@@ -527,6 +552,20 @@
 
       const wasGround = p.onGround, vyBefore = p.vy;
       const r = this.move(p, dt);
+      // Waten: langsamer, träger Sprung, kein Dash, dafür sanfteres Fallen
+      const wasWet = p.wet;
+      p.wet = r.water;
+      if (p.wet) {
+        p.vx *= Math.pow(0.35, dt);
+        if (p.vy > 420) p.vy = 420;
+        if (Math.random() < 0.3) this.part({ x: p.x + rnd(-24, 24), y: p.y + p.h / 2 - rnd(0, 30), vx: rnd(-60, 60),
+          vy: rnd(-120, -30), g: 900, life: rnd(0.2, 0.5), size: rnd(3, 7), color: '#9ee8c0', kind: 'goo' });
+      }
+      if (p.wet !== wasWet) {                       // Platschen beim Ein- und Austauchen
+        this.audio.land(0.3);
+        for (let i = 0; i < 16; i++) this.part({ x: p.x + rnd(-30, 30), y: p.y + p.h / 2 - 10, vx: rnd(-260, 260),
+          vy: rnd(-420, -120), g: 1300, life: rnd(0.3, 0.7), size: rnd(3, 8), color: '#9ee8c0', kind: 'goo' });
+      }
       if (r.ceil && p.vy < 0) p.vy = 0;
       p.onGround = r.ground;
       if (r.ground) {
@@ -768,6 +807,10 @@
         case 'k': this.addEnemy('skimmer', s.x, s.y - 250); break;
         case 'h': this.addEnemy('thorn', s.x, s.y - 75); break;
         case 'm': this.addEnemy('mortar', s.x, s.y - 75); break;
+        case 'l': this.addEnemy('leech', s.x, s.y - 35); break;
+        case 'f': this.addEnemy('stingfly', s.x, s.y - 260); break;
+        case 'o': this.addEnemy('sporepod', s.x, s.y - 75); break;
+        case 'U': this.addEnemy('mudhulk', s.x, s.y - 80); break;
         case '$': this.pickups.push({ type: 'coin', x: s.x, y: s.y - T / 2, vx: 0, vy: 0, fixed: true, t: rnd(0, 6) }); break;
         case 'H': case 'G': case 'S': case 'L': case 'R': case 'A':
           this.pickups.push({ type: s.ch, x: s.x, y: s.y - 40, vx: 0, vy: 0, fixed: true, t: 0 }); break;
@@ -1073,6 +1116,88 @@
           }
           break;
         }
+        case 'leech': {
+          // kriecht und schwimmt auf den Helden zu, im Wasser schneller
+          const r = this.move(e, dt);
+          e.wet = r.water;
+          e.vy = e.wet ? Math.sin(e.t * 3) * 40 : Math.min(1600, e.vy + P.grav * dt);
+          if (r.ground) e.vy = 0;
+          e.face = Math.sign(dx) || e.face;
+          const sp = e.wet ? 260 : 150;
+          if (alive && dist < 1000) e.vx = e.face * sp; else e.vx = 0;
+          e.walk = (e.walk || 0) + dt * Math.abs(e.vx) / 20;
+          if (alive && Math.abs(dx) < 260 && Math.abs(dy) < 160 && (e.cd -= dt) <= 0 && (r.ground || e.wet)) {
+            e.cd = rnd(1.4, 2.2);
+            e.vy = -760; e.vx = e.face * 520;
+            this.audio.squish();
+          }
+          break;
+        }
+        case 'stingfly': {
+          // schwirrt umher und sticht im Sturzflug zu
+          e.state = e.state || 'fly';
+          if (e.state === 'fly') {
+            const tx = p.x + Math.sin(e.t * 2.3) * 320, ty = p.y - 260 + Math.sin(e.t * 3.7) * 90;
+            e.vx += clamp(tx - e.x, -400, 400) * 5 * dt; e.vy += clamp(ty - e.y, -400, 400) * 5 * dt;
+            e.vx *= Math.pow(0.15, dt); e.vy *= Math.pow(0.15, dt);
+            if (alive && dist < 620 && (e.cd -= dt) <= 0) {
+              e.state = 'dive'; e.diveT = 0;
+              const a = Math.atan2(p.y - e.y, p.x - e.x);
+              e.vx = Math.cos(a) * 1050; e.vy = Math.sin(a) * 1050;
+            }
+          } else {
+            e.diveT += dt;
+            if (e.diveT > 0.55 || this.solidAt(e.x, e.y + 30)) { e.state = 'fly'; e.cd = rnd(1.2, 2); e.vy = -400; }
+          }
+          e.x += e.vx * dt; e.y += e.vy * dt;
+          e.face = e.vx > 0 ? 1 : -1;
+          break;
+        }
+        case 'sporepod': {
+          // Pilz: bläst Sporenwolken aus, die auf den Helden zutreiben
+          e.vy = Math.min(1600, e.vy + P.grav * dt);
+          if (this.move(e, dt).ground) e.vy = 0;
+          e.charge = Math.max(0, (e.charge || 0) - dt);
+          if (alive && dist < 1000 && (e.cd -= dt) <= 0) {
+            e.cd = rnd(3.4, 4.6);
+            e.charge = 0.6;
+            this.pending.push({ t: 0.6, fn: () => {
+              if (e.dead) return;
+              this.spores(e.x, e.y - 60, 150, Math.sign(this.player.x - e.x) * rnd(20, 60));
+              this.part({ x: e.x, y: e.y - 60, life: 0.2, size: 200, color: '#c8ff5a', kind: 'flash' });
+            } });
+          }
+          break;
+        }
+        case 'mudhulk': {
+          // Panzerrücken vorn, brüllt und stürmt los
+          e.vy = Math.min(1600, e.vy + P.grav * dt);
+          e.face = dx > 0 ? 1 : -1;
+          e.charge = Math.max(0, (e.charge || 0) - dt);
+          if (e.state === 'rush') {
+            e.rushT -= dt;
+            e.vx = e.rushDir * 620;
+            if (e.rushT <= 0) { e.state = 'walk'; e.cd = rnd(2, 3); }
+          } else {
+            e.vx = alive && dist < 1200 ? e.face * 130 : 0;
+            if (!this.groundAhead(e, Math.sign(e.vx) || 1)) e.vx = 0;
+            if (alive && Math.abs(dx) < 720 && Math.abs(dy) < 220 && (e.cd -= dt) <= 0) {
+              e.charge = 0.7;
+              this.pending.push({ t: 0.7, fn: () => {
+                if (e.dead) return;
+                e.state = 'rush'; e.rushT = 1.1; e.rushDir = Math.sign(this.player.x - e.x) || 1;
+                this.audio.bossRoar();
+                this.dust(e.x, e.y + e.h / 2, 12);
+              } });
+              e.cd = 4;
+            }
+          }
+          const r2 = this.move(e, dt);
+          if (r2.ground) e.vy = 0;
+          if (r2.wall && e.state === 'rush') { e.state = 'walk'; e.cd = rnd(2, 3); this.shake = Math.max(this.shake, 0.4); }
+          e.walk = (e.walk || 0) + dt * Math.abs(e.vx) / 28;
+          break;
+        }
         case 'boss': this.updateBoss(e, dt); break;
       }
       // Berührung
@@ -1095,6 +1220,15 @@
     damageEnemy(e, dmg, hx, hy, dx, dy, quiet, aoe) {
       if (e.dead || e.intro || e.hidden) return;
       // Wächter: der geschlossene Schild vorn hält Schüsse ab, Explosionen gehen durch
+      if (e.type === 'mudhulk' && !aoe && e.charge <= 0 && e.state !== 'rush' && dx * e.face < 0) {
+        e.shieldHit = 1;
+        if (!quiet || Math.random() < 0.3) {
+          this.audio.hit('metal');
+          for (let i = 0; i < 3; i++) this.part({ x: hx, y: hy, vx: -dx * rnd(200, 600), vy: rnd(-300, 200),
+            life: rnd(0.1, 0.25), size: rnd(2, 3), color: '#a8c86a', kind: 'spark' });
+        }
+        return;
+      }
       if (e.type === 'sentinel' && !e.open && !aoe && dx * e.face < 0) {
         e.shieldHit = 1;
         if (!quiet || Math.random() < 0.3) {
@@ -1218,16 +1352,25 @@
     startBoss() {
       const L = this.L, B = L.boss, cfg = BOSSES[L.def.boss], R = RIGS[cfg.rig];
       const chain = R.kind === 'chain';
-      const lift = chain ? 0 : R.stand;
+      const biped = !R.kind;                       // nur die Zweibeiner haben Hüfte, Auge und Schulter
+      const lift = biped ? R.stand : 0;
       const e = this.addEnemy('boss', B.x + 120, B.y - lift, { intro: true, introT: 0, phase: 1, atk: null, atkT: 0,
         step: 0, rear: 0, recoil: 0,
         cd: 3.5, baseY: B.y - lift, baseX: B.x + 120, cfg, R,
         hp: this.opts.weak || cfg.hp, maxHp: this.opts.weak || cfg.hp });
       // Trefferzone; bei den Zweibeinern zusätzlich Kern, Auge und Schulter relativ zur Hüfte (Blick nach links)
       e.body = R.body;
-      if (!chain) Object.assign(e, { core: { x: -R.core.x, y: R.core.y, r: R.core.r }, eye: { x: -R.eye.x, y: R.eye.y },
+      if (biped) Object.assign(e, { core: { x: -R.core.x, y: R.core.y, r: R.core.r }, eye: { x: -R.eye.x, y: R.eye.y },
         cannon: { x: -R.shoulder.x, y: R.shoulder.y } });
-      if (chain) {
+      if (R.kind === 'tentacle') {
+        // Rotmother: sitzt im Wasser, zwei Tentakel hängen an ihrem Leib
+        const fy = this.L.ph - 3 * 64;
+        e.y = fy - 120;
+        e.baseY = e.y;
+        e.rot = { x: e.x, y: e.y, sink: 1, mouth: 0, mode: 'intro', t: 0, breathe: 0,
+          arms: R.shoulder.map((s, i) => ({ pts: Array.from({ length: R.segs }, () => ({ x: e.x, y: e.y })),
+            target: { x: e.x - 200 - i * 120, y: fy - 40 }, state: 'idle', t: 0, side: i })) };
+      } else if (chain) {
         // Leviathan: Kopf auf einer Bahn, die Segmente laufen hinterher
         const fy = this.L.ph - 3 * 64;
         e.worm = { x: B.x + 400, y: fy + 200, ang: -Math.PI / 2, speed: 0, mode: 'intro', t: 0,
@@ -1340,6 +1483,7 @@
       const p = this.player, A = this.L.arena, cfg = e.cfg, col = cfg.color;
       this.updateBossHits(e, dt);
       if (e.R.kind === 'chain') return this.updateWorm(e, dt);
+      if (e.R.kind === 'tentacle') return this.updateRot(e, dt);
       this.animateRig(e, dt);
       if (!e.dying) p.x = Math.min(p.x, e.baseX + e.body.x0 + 60 - p.w / 2);
       if (e.intro) {
@@ -1516,6 +1660,203 @@
         this.hurtPlayer(EN.boss.dmg, -1);
         if (!p.dead) p.vx = -900;
       }
+    }
+
+    // ---------- Die Rotmother: Leib im Wasser, zwei Tentakel als Seil ----------
+
+    // Seil auf Basis und Ziel einpassen (FABRIK, zwei Durchläufe)
+    solveRope(pts, base, target, len) {
+      const pull = (a, b) => {
+        const dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy) || 1;
+        a.x = b.x + dx / d * len; a.y = b.y + dy / d * len;
+      };
+      for (let k = 0; k < 2; k++) {
+        const last = pts[pts.length - 1];
+        last.x = target.x; last.y = target.y;
+        for (let i = pts.length - 2; i >= 0; i--) pull(pts[i], pts[i + 1]);
+        pts[0].x = base.x; pts[0].y = base.y;
+        for (let i = 1; i < pts.length; i++) pull(pts[i], pts[i - 1]);
+      }
+    }
+
+    updateRot(e, dt) {
+      const R = e.R, r = e.rot, p = this.player, A = this.L.arena, cfg = e.cfg, col = cfg.color;
+      const fy = this.L.ph - 3 * 64;
+      r.t += dt;
+      r.breathe += dt;
+      const hpk = e.hp / e.maxHp;
+      const phase = hpk > 0.66 ? 1 : hpk > 0.33 ? 2 : 3;
+      if (!e.dying && phase !== e.phase) {
+        e.phase = phase;
+        this.audio.bossRoar();
+        this.shake = 0.9; this.flash = 0.5; this.flashColor = col;
+        this.say(phase === 2 ? 'PHASE 2' : 'FINAL PHASE', col, 1.6);
+        r.mode = 'dive'; r.t = 0;
+      }
+      const fast = phase === 3 ? 1.3 : phase === 2 ? 1.15 : 1;
+
+      if (e.dying) {
+        r.sink = Math.min(1, r.sink + dt * 0.35);
+        r.mouth = 1;
+        for (const a of r.arms) { a.state = 'limp'; a.target.y += 260 * dt; a.target.x += (a.side ? 60 : -60) * dt; }
+      } else if (r.mode === 'intro') {
+        // taucht langsam aus dem Wasser auf
+        r.sink = Math.max(0, 1 - r.t / 2.4);
+        if (r.t > 1 && r.t < 1.1) { this.audio.bossRoar(); this.shake = 1; this.rotSplash(e, fy); }
+        r.mouth = clamp(1.4 - Math.abs(r.t - 1.6), 0, 1);
+        if (r.t > 3) { r.mode = 'idle'; r.t = 0; e.intro = false; e.cd = 1; }
+      } else if (r.mode === 'dive') {
+        // abtauchen, umsetzen, wieder auftauchen
+        if (r.t < 0.9) r.sink = Math.min(1, r.t / 0.7);
+        else if (r.t < 1.1) {
+          if (!r.moved) {
+            r.moved = true;
+            r.x = clamp(p.x + (Math.random() < 0.5 ? -1 : 1) * rnd(500, 800), A.x + 420, A.x + 1650);
+            this.rotSplash(e, fy);
+          }
+        } else {
+          r.sink = Math.max(0, 1 - (r.t - 1.1) / 0.7);
+          if (r.t > 2) { r.mode = 'idle'; r.t = 0; r.moved = false; e.cd = 0.7; this.rotSplash(e, fy); }
+        }
+        r.mouth = lerp(r.mouth, 0, 1 - Math.pow(0.02, dt));
+      } else {
+        // Angriffe wählen
+        r.mouth = lerp(r.mouth, r.arms.some(a => a.state === 'spit') ? 1 : 0, 1 - Math.pow(0.02, dt));
+        if ((e.cd -= dt) <= 0 && r.arms.every(a => a.state === 'idle')) {
+          const pool = cfg.pool.slice(0, phase).flat();
+          let a;
+          do a = pick(pool); while (a === e.last && pool.length > 1);
+          e.last = a;
+          e.cd = (a === 'whip' || a === 'sweep' ? 2.4 : 2) / fast;
+          this.rotAttack(e, a, phase);
+          if (Math.random() < 0.3) { r.mode = 'dive'; r.t = 0; r.moved = false; e.cd += 2.4; }
+        }
+      }
+      // Leib atmet und wiegt sich im Wasser
+      e.x = r.x;
+      e.y = r.y = e.baseY + Math.sin(r.breathe * 1.3) * 12 + r.sink * R.sink;
+      const swell = 1 + Math.sin(r.breathe * 1.3) * 0.02;
+      e.swell = swell;
+      // Trefferkreise: der Leib, die Tentakel sind nicht zu treffen
+      const hidden = r.sink > 0.75;
+      e.hidden = hidden;
+      e.hitCircles = hidden ? [] : [
+        { x: e.x - 40, y: e.y - 120, r: 150 },
+        { x: e.x + 40, y: e.y + 40, r: 170 },
+        { x: e.x - 150, y: e.y - 60, r: 120 },
+      ];
+      e.throat = hidden ? null : { x: e.x + R.core.x, y: e.y + R.core.y, r: R.core.r };
+      e.mouthPos = { x: e.x + R.mouth.x, y: e.y + R.mouth.y };
+      // Tentakel bewegen und einpassen
+      for (const a of r.arms) {
+        const sh = R.shoulder[a.side];
+        const base = { x: e.x + sh.x, y: e.y + sh.y };
+        a.t += dt;
+        if (a.state === 'idle') {
+          const rest = { x: e.x - 260 - a.side * 90, y: fy - 40 - Math.sin(r.breathe * 1.1 + a.side) * 60 };
+          a.target.x = lerp(a.target.x, rest.x, 1 - Math.pow(0.2, dt));
+          a.target.y = lerp(a.target.y, rest.y, 1 - Math.pow(0.2, dt));
+        } else if (a.state === 'raise') {
+          a.target.x = lerp(a.target.x, p.x, 1 - Math.pow(0.02, dt));
+          a.target.y = lerp(a.target.y, fy - 620, 1 - Math.pow(0.01, dt));
+          if (a.t > 0.75) { a.state = 'slam'; a.t = 0; a.slamX = p.x; this.audio.charge(0.3); }
+        } else if (a.state === 'slam') {
+          a.target.x = lerp(a.target.x, a.slamX, 1 - Math.pow(0.2, dt));
+          a.target.y += 3600 * dt;
+          if (a.target.y > fy - 20) {
+            a.target.y = fy - 20;
+            if (!a.hit) {
+              a.hit = true;
+              this.audio.slam();
+              this.shake = 1; this.rumble(1, 0.8, 300);
+              this.dust(a.target.x, fy, 26);
+              this.ring(a.target.x, fy, 380, col);
+              this.waves.push({ x: a.target.x, y: fy, dir: -1, speed: 760, h: 70, life: 3, color: col });
+              this.waves.push({ x: a.target.x, y: fy, dir: 1, speed: 760, h: 70, life: 3, color: col });
+              if (!p.dead && Math.abs(p.x - a.target.x) < 120 && p.y > fy - 220) this.hurtPlayer(30, Math.sign(p.x - a.target.x) || 1);
+            }
+            if (a.t > 0.9) { a.state = 'idle'; a.t = 0; a.hit = false; }
+          }
+        } else if (a.state === 'sweep') {
+          a.target.x -= a.dir * 1250 * dt;
+          a.target.y = fy - 70 + Math.sin(a.t * 6) * 20;
+          if (a.t > 1.5 || a.target.x < A.x + 80 || a.target.x > A.x + 1800) { a.state = 'idle'; a.t = 0; }
+        } else if (a.state === 'spit') {
+          a.target.x = lerp(a.target.x, e.x - 200, 1 - Math.pow(0.1, dt));
+          a.target.y = lerp(a.target.y, e.y - 280, 1 - Math.pow(0.1, dt));
+          if (a.t > 1.2) { a.state = 'idle'; a.t = 0; }
+        } else if (a.state === 'limp') {
+          a.target.y = Math.min(a.target.y, fy - 10);
+        }
+        this.solveRope(a.pts, base, a.target, R.segLen);
+        // die schlagenden und fegenden Tentakel tun weh
+        if (!p.dead && !e.dying && (a.state === 'sweep' || a.state === 'slam')) {
+          for (const pt of a.pts) {
+            if (Math.hypot(p.x - pt.x, p.y - pt.y) < 70) { this.hurtPlayer(22, Math.sign(p.x - pt.x) || 1); break; }
+          }
+        }
+      }
+      // Berührung mit dem Leib
+      if (!p.dead && !e.dying && !hidden) {
+        for (const c of e.hitCircles) {
+          if (Math.hypot(p.x - c.x, p.y - c.y) < c.r + 30) { this.hurtPlayer(25, Math.sign(p.x - c.x) || -1); break; }
+        }
+      }
+    }
+
+    rotSplash(e, fy) {
+      const r = e.rot;
+      this.audio.boom(2);
+      this.shake = Math.max(this.shake, 0.6);
+      this.ring(r.x, fy, 420, '#9ee8c0');
+      for (let i = 0; i < 50; i++) this.part({ x: r.x + rnd(-200, 200), y: fy, vx: rnd(-600, 600), vy: rnd(-900, -200),
+        g: 1500, life: rnd(0.4, 1), size: rnd(4, 12), color: pick(['#9ee8c0', '#6ab88a', '#c8ff5a']), kind: 'goo' });
+    }
+
+    rotAttack(e, a, phase) {
+      const R = e.R, r = e.rot, p = this.player, A = this.L.arena, col = e.cfg.color;
+      const fy = this.L.ph - 3 * 64;
+      const arm = pick(r.arms.filter(x => x.state === 'idle')) || r.arms[0];
+      if (a === 'whip') {
+        arm.state = 'raise'; arm.t = 0; arm.hit = false;
+        if (phase === 3) {                       // in der letzten Phase schlagen beide zu
+          const other = r.arms.find(x => x !== arm);
+          if (other) this.pending.push({ t: 0.5, fn: () => { if (!e.dead && other.state === 'idle') { other.state = 'raise'; other.t = 0; other.hit = false; } } });
+        }
+      } else if (a === 'sweep') {
+        arm.state = 'sweep'; arm.t = 0;
+        arm.dir = p.x < e.x ? 1 : -1;
+        arm.target.x = e.x - arm.dir * 200;
+        arm.target.y = fy - 70;
+        this.audio.charge(0.4);
+        this.say('SWEEP  -  JUMP!', col, 1, true);
+      } else if (a === 'spit') {
+        arm.state = 'spit'; arm.t = 0;
+        r.mouth = 1;
+        for (let k = 0; k < 4 + phase; k++) this.pending.push({ t: 0.3 + k * 0.14, fn: () => {
+          if (e.dead) return;
+          const m = e.mouthPos, T2 = rnd(0.9, 1.3);
+          const tx = p.x + rnd(-160, 160);
+          this.ebullets.push({ kind: 'acid', x: m.x, y: m.y, vx: (tx - m.x) / T2, vy: (fy - m.y - 0.5 * 1400 * T2 * T2) / T2,
+            r: 15, dmg: 16, life: 4, g: 1400, t: 0, color: '#c8ff5a' });
+          this.part({ x: m.x, y: m.y, life: 0.1, size: 120, color: col, kind: 'flash' });
+        } });
+        this.audio.squish();
+      } else if (a === 'spores') {
+        for (let k = 0; k < 2 + (phase > 2 ? 1 : 0); k++) this.pending.push({ t: k * 0.4, fn: () => {
+          if (e.dead) return;
+          const m = e.mouthPos;
+          this.spores(m.x + rnd(-60, 60), m.y, 170, Math.sign(p.x - e.x) * rnd(40, 90));
+        } });
+      } else if (a === 'brood') {
+        for (let i = 0; i < 2; i++) {
+          const type = Math.random() < 0.5 ? 'stingfly' : 'leech';
+          const s = this.addEnemy(type, e.x - 150 + rnd(-80, 80), e.y - 100);
+          s.vy = -500; s.vx = rnd(-300, -100);
+        }
+        this.audio.squish();
+      }
+      this.audio.bossRoar();
     }
 
     // ---------- Der Devourer: Kette aus Segmenten, die aus dem Sand bricht ----------
@@ -1759,6 +2100,7 @@
       this.flash = 1; this.flashColor = '#ffffff';
       this.rumble(1, 1, 2000);
       if (e.R.kind === 'chain') { e.worm.mode = 'death'; e.hitCircles = null; }
+      if (e.R.kind === 'tentacle') e.hitCircles = null;
       const n = this.L.last ? 40 : 26;
       for (let i = 0; i < n; i++) {
         this.pending.push({ t: i * 0.12 + rnd(0, 0.08), fn: () => {
@@ -1948,6 +2290,29 @@
         const d = Math.hypot(p.x - x, p.y - y);
         if (d < radius * 0.8) this.hurtPlayer(o.barrel ? 25 : 20, Math.sign(p.x - x) || 1);
       }
+    }
+
+    // Sporenwolken treiben, wachsen und vergiften, wer drinsteht
+    updateClouds(dt) {
+      const p = this.player;
+      for (const c of this.clouds) {
+        c.t += dt;
+        c.x += c.vx * dt; c.y += c.vy * dt;
+        c.vy *= Math.pow(0.5, dt);
+        c.r = c.r0 * (0.4 + 0.6 * Math.min(1, c.t / 1.2)) * (c.t > c.life - 1 ? Math.max(0, (c.life - c.t)) : 1);
+        if (Math.random() < 0.5) this.part({ x: c.x + rnd(-c.r, c.r) * 0.7, y: c.y + rnd(-c.r, c.r) * 0.7,
+          vx: rnd(-20, 20), vy: rnd(-30, -5), life: rnd(0.6, 1.4), size: rnd(18, 40), color: '#7a9a3a', kind: 'smoke' });
+        if (!p.dead && c.t > 0.3 && Math.hypot(p.x - c.x, p.y - c.y) < c.r) {
+          c.dmgT = (c.dmgT || 0) - dt;
+          if (c.dmgT <= 0) { c.dmgT = 0.6; this.hurtPlayer(8, 0); }
+        }
+      }
+      this.clouds = this.clouds.filter(c => c.t < c.life);
+    }
+
+    spores(x, y, r0, vx) {
+      this.clouds.push({ x, y, r: 10, r0, vx, vy: -40, t: 0, life: 7 });
+      this.audio.squish();
     }
 
     // ---------- Beute ----------

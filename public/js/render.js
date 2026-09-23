@@ -28,6 +28,11 @@
       arm2: { a: { x: 0.08, y: 0.50 }, b: { x: 0.97, y: 0.50 } },
       arm2Front: true,
     },
+    rot: {
+      body: { mid: { x: 0.5, y: 0.5 } },
+      seg: { a: { x: 0.5, y: 0.08 }, b: { x: 0.5, y: 0.92 } },
+      tip: { a: { x: 0.05, y: 0.5 }, b: { x: 0.95, y: 0.5 } },
+    },
     worm: {
       head: { a: { x: 0.85, y: 0.5 }, b: { x: 0.05, y: 0.5 } },   // Nacken -> Maul (Kopf zeigt nach links)
       arm: { a: { x: 0.08, y: 0.50 }, b: { x: 0.97, y: 0.50 } },
@@ -228,8 +233,10 @@
       for (const e of g.enemies) if (e.type !== 'boss') this.drawEnemy(g, e);
       this.drawStrikes(g);
       this.drawPlayer(g);
+      this.drawWater(g, cx, cy);
       this.drawBullets(g);
       this.drawParts(g);
+      this.drawClouds(g);
       this.drawFloaters(g);
       c.restore();
       this.drawForeground(g);
@@ -417,6 +424,10 @@
               c.globalAlpha = 1;
               c.globalCompositeOperation = 'source-over';
             } else c.fillRect(px, py, T, T);
+          } else if (t === 7) {
+            // Wasser kommt erst nach den Figuren, hier nur der dunkle Grund
+            c.fillStyle = 'rgba(8,24,18,0.55)';
+            c.fillRect(px, py, T + 0.5, T + 0.5);
           } else if (t === 5) {
             this.spr('crate', px + T / 2, py + T / 2 + 2, T + 6, { flash: L.hp.get(ty * L.w + tx) < 20 ? 0.3 : 0 });
           } else if (t === 6) {
@@ -425,6 +436,42 @@
             this.gl(this.glows.red, px + T / 2, py + 14, 50, 0.5 + 0.5 * Math.sin(g.time * 6 + tx));
             c.globalAlpha = 1;
             c.globalCompositeOperation = 'source-over';
+          }
+        }
+      }
+    }
+
+    // Wasser: liegt über den Figuren, damit der Held wirklich darin watet
+    drawWater(g, cx, cy) {
+      const c = this.c, L = g.L, T = L.T, th = L.theme;
+      const wa = th.water;
+      if (!wa) return;
+      const x0 = Math.max(0, Math.floor(cx / T) - 1), x1 = Math.min(L.w - 1, Math.floor((cx + W) / T) + 1);
+      const y0 = Math.max(0, Math.floor(cy / T)), y1 = Math.min(L.h - 1, Math.floor((cy + H) / T));
+      for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+          if (L.tiles[ty * L.w + tx] !== 7) continue;
+          const px = tx * T, py = ty * T;
+          const top = ty === 0 || L.tiles[(ty - 1) * L.w + tx] !== 7;
+          c.fillStyle = top ? wa.top : wa.deep;
+          if (top) {
+            // Wellenlinie an der Oberfläche
+            c.beginPath();
+            c.moveTo(px, py + T);
+            for (let k = 0; k <= 8; k++) {
+              const wx = px + k * 8;
+              c.lineTo(wx, py + 10 + Math.sin(g.time * 2.2 + wx * 0.03) * 6);
+            }
+            c.lineTo(px + T, py + T);
+            c.fill();
+            c.globalCompositeOperation = 'lighter';
+            c.globalAlpha = 0.25 + 0.1 * Math.sin(g.time * 3 + tx);
+            c.fillStyle = wa.glow;
+            c.fillRect(px, py + 10 + Math.sin(g.time * 2.2 + px * 0.03) * 6, T, 3);
+            c.globalAlpha = 1;
+            c.globalCompositeOperation = 'source-over';
+          } else {
+            c.fillRect(px, py, T + 0.5, T + 0.5);
           }
         }
       }
@@ -800,6 +847,44 @@
           this.hpBar(e, e.y - e.h * 0.7);
           break;
         }
+        case 'leech': {
+          const wig = Math.sin((e.walk || 0) * 2 + e.t * 6) * 0.12;
+          this.spr('leech', e.x, e.y, e.h * 1.5, { flip: e.face > 0, rot: wig, flash: fl,
+            sy: 1 + Math.sin(e.t * 8) * 0.06 });
+          break;
+        }
+        case 'stingfly': {
+          const flap = Math.sin(e.t * 40);
+          this.spr('stingfly', e.x, e.y, e.h * 1.4, { flip: e.face > 0, flash: fl,
+            sx: 1 - 0.25 * Math.abs(flap), rot: e.state === 'dive' ? clamp(e.vx / 3000, -0.4, 0.4) : 0 });
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glowOf('#c8ff5a'), e.x, e.y, 60, 0.35);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          break;
+        }
+        case 'sporepod': {
+          const k = e.charge > 0 ? 1 - e.charge / 0.6 : 0;
+          this.spr('sporepod', e.x, e.y + e.h / 2, e.h * 1.35, { ay: 1, flip: e.face > 0,
+            sx: 1 + 0.12 * k, sy: 1 - 0.08 * k, flash: fl });
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glowOf('#c8ff5a'), e.x, e.y - 30, 70 + 120 * k, 0.3 + 0.4 * k);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          break;
+        }
+        case 'mudhulk': {
+          const bob = Math.sin(e.walk || 0) * 6;
+          const k = e.charge > 0 ? 1 - e.charge / 0.7 : 0;
+          this.spr('mudhulk', e.x, e.y + bob, e.h * 1.35, { flip: e.face > 0, flash: Math.max(fl, k * 0.4),
+            sx: 1 + 0.06 * k, sy: 1 - 0.04 * k });
+          e.shieldHit = Math.max(0, (e.shieldHit || 0) - 0.08);
+          if (e.shieldHit > 0) {
+            c.globalCompositeOperation = 'lighter';
+            this.gl(this.glowOf('#a8c86a'), e.x + e.face * 60, e.y, 160, 0.4 * e.shieldHit);
+            c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          }
+          this.hpBar(e, e.y - e.h * 0.7);
+          break;
+        }
         case 'sandworm': {
           if (e.hidden) {            // unter dem Sand: nur ein Hügel und Staub
             const gy = e.y - 110;
@@ -957,7 +1042,7 @@
     drawBoss(g, e) {
       const c = this.c, cfg = e.cfg;
       const rage = e.phase === 3 || cfg.rage ? 0.5 + 0.5 * Math.sin(g.time * 10) : 0;
-      if (e.rig || e.worm) return this.drawBossParts(g, e, rage);
+      if (e.rig || e.worm || e.rot) return this.drawBossParts(g, e, rage);
       c.fillStyle = '#402050';
       const b = g.hitbox(e);
       c.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);   // Notbehelf, falls Teile fehlen
@@ -967,6 +1052,7 @@
     drawBossParts(g, e, rage) {
       const c = this.c, cfg = e.cfg, R = e.R, rg = e.rig, face = -1;
       if (R.kind === 'chain') return this.drawWorm(g, e, rage);
+      if (R.kind === 'tentacle') return this.drawRot(g, e, rage);
       const col = this.glowOf(cfg.color);
       const at = (o) => ({ x: rg.hipX + o.x * face + (e.kickX || 0), y: rg.hipY + o.y + (e.kickY || 0) });
       const core = at(R.core), eye = at(R.eye);
@@ -1074,6 +1160,53 @@
       this.gl(col, m.x, m.y, 150 + 220 * (w.mouth || 0) + 30 * Math.sin(g.time * 8), 0.5 + 0.4 * (w.mouth || 0));
       if (e.crit > 0) this.gl(this.glows.gold, m.x, m.y, 240 * Math.min(1, e.crit * 4), Math.min(1, e.crit * 4));
       for (const s of segs) this.gl(col, s.x, s.y, 90 * s.s, 0.18 + 0.1 * rage);
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      this.bossWaves(g);
+    }
+
+    // Die Rotmother: Leib im Wasser, zwei Tentakel aus aneinandergereihten Segmenten
+    drawRot(g, e, rage) {
+      const c = this.c, R = e.R, rt = e.rot, I = this.img, F = BOSS.rot;
+      const col = this.glowOf(e.cfg.color);
+      const flash = Math.max(e.hitFlash || 0, e.dying ? 0.25 + 0.25 * Math.sin(g.time * 30) : 0);
+      const segIm = I[R.parts.seg], tipIm = I[R.parts.tip], bodyIm = I[R.parts.body];
+      if (!bodyIm) return;
+      // Tentakel: Segment für Segment entlang des Seils
+      for (const a of rt.arms) {
+        for (let i = 0; i < a.pts.length - 1; i++) {
+          const p0 = a.pts[i], p1 = a.pts[i + 1];
+          const ang = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+          const len = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+          const taper = 1 - i / a.pts.length * 0.45;
+          if (segIm) {
+            c.save();
+            c.translate(p0.x, p0.y);
+            c.rotate(ang - Math.PI / 2);
+            const h = len * 1.25, wd = R.segH * taper;
+            c.drawImage(segIm, -wd / 2, -h * 0.12, wd, h);
+            c.restore();
+          }
+        }
+        const last = a.pts[a.pts.length - 1], prev = a.pts[a.pts.length - 2];
+        if (tipIm && prev) {
+          const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
+          this.piece(tipIm, F.tip.a, F.tip.b, prev.x, prev.y, ang, R.tipH);
+        }
+        if (a.state === 'slam' || a.state === 'sweep') {
+          c.globalCompositeOperation = 'lighter';
+          this.gl(col, last.x, last.y, 160, 0.5);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+        }
+      }
+      // Leib
+      const BH = R.bodyH * (e.swell || 1);
+      this.spr(R.parts.body, e.x, e.y, BH, { flip: true, flash, sy: (e.swell || 1) });
+      // Eiersack und Maul leuchten
+      c.globalCompositeOperation = 'lighter';
+      this.gl(col, e.x + R.core.x, e.y + R.core.y, 280 + 40 * Math.sin(g.time * 3), 0.35 + 0.2 * rage);
+      const m = e.mouthPos || { x: e.x, y: e.y };
+      this.gl(col, m.x, m.y, 120 + 180 * (rt.mouth || 0), 0.4 + 0.4 * (rt.mouth || 0));
+      if (e.crit > 0) this.gl(this.glows.gold, e.x + R.core.x, e.y + R.core.y, 260 * Math.min(1, e.crit * 4), Math.min(1, e.crit * 4));
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       this.bossWaves(g);
     }
@@ -1277,6 +1410,21 @@
       }
       c.globalAlpha = 1;
       c.globalCompositeOperation = 'source-over';
+    }
+
+    // Sporenwolken: weiche, giftig grüne Schwaden
+    drawClouds(g) {
+      const c = this.c;
+      for (const cl of g.clouds) {
+        const a = Math.min(1, cl.t * 2) * Math.min(1, (cl.life - cl.t) / 1.5);
+        c.globalAlpha = 0.35 * a;
+        c.drawImage(this.smokeOf('#8ab83a'), cl.x - cl.r, cl.y - cl.r, cl.r * 2, cl.r * 2);
+        c.globalCompositeOperation = 'lighter';
+        c.globalAlpha = 0.12 * a;
+        this.gl(this.glowOf('#c8ff5a'), cl.x, cl.y, cl.r * 2.2, 1);
+        c.globalAlpha = 1;
+        c.globalCompositeOperation = 'source-over';
+      }
     }
 
     drawFloaters(g) {

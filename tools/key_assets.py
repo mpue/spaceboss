@@ -59,14 +59,25 @@ SPRITES = {
     "dev_arm": ("dev_arm_11", 800, 400),
     "dunes": ("dunes_23", 1536, 640),
     "debris": ("debris_11", 1536, 640),
+    # Level 5: The Swamp
+    "leech": ("leech_11", 320, 220),
+    "stingfly": ("stingfly_11", 300, 280),
+    "sporepod": ("sporepod_23", 280, 340),
+    "mudhulk": ("mudhulk_11", 480, 340),
+    "mom_body": ("mom_body_23", 800, 800),
+    "mom_seg": ("mom_seg_11", 300, 300),
+    "mom_tip": ("mom_tip_11", 700, 350),
+    "trees": ("trees_11", 1536, 640),
+    "reeds": ("reeds_11", 1536, 640),
     "fungi": ("fungi_11", 1536, 640),
     "machinery": ("machinery_11", 1536, 640),
 }
 ADDITIVE = {"explosion": ("explosion_11", 512), "plasma": ("plasma_11", 512)}
 BACKDROPS = {"sky": ("sky_11", 1920), "title": ("title_23", 1920), "cave_bg": ("cave_bg_11", 1920),
-             "ship_bg": ("ship_bg_11", 1920), "desert_bg": ("desert_bg_11", 1920)}
+             "ship_bg": ("ship_bg_11", 1920), "desert_bg": ("desert_bg_11", 1920),
+             "swamp_bg": ("swamp_bg_11", 1920)}
 TEXTURES = {"ground": "ground_23", "metal": "metal_11", "cave": "cave_11", "hull": "hull_23",
-            "sand": "sand_11", "rust": "rust_23"}
+            "sand": "sand_11", "rust": "rust_23", "mud": "mud_11", "bark": "bark_11"}
 
 
 def smoothstep(a, b, x):

@@ -2,8 +2,8 @@
 
 Run-and-Gun-Jump'n'Run im Browser, im Stil von Hypersense: polierte 3D-Sprites aus dem lokalen ComfyUI,
 Orbitron-HUD, viel Leuchten, Funken, Rauch und Explosionen. Ein **muskulöser Astronaut** im orange-weißen
-Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch vier Level bis in die Wüste, in der
-das Mutterschiff zerschellt ist.
+Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch fünf Level: von der Absturzstelle
+über das Mutterschiff und die Wüste bis in den Sumpf, in dem die Wurzeln der Brut sitzen.
 
 | Level | Schauplatz | Boss |
 |---|---|---|
@@ -11,6 +11,7 @@ das Mutterschiff zerschellt ist.
 | 2 **HIVE CAVERNS** | organische Alien-Höhlen mit Säureflüssen und Brutkammern | **Hive Queen** |
 | 3 **MOTHERSHIP** | im Inneren des Mutterschiffs, Lasertore und Aufzugsschächte | **Spaceboss in der Endform** |
 | 4 **THE OUTBACKS** | rote Wüste mit Treibsand, Wrackfeldern und Sandsturm, zwei Sonnen am Horizont | **The Devourer**, ein Sandleviathan |
+| 5 **THE SWAMP** | Sumpf mit watbaren Tümpeln, Totholz, Giftschlamm und Sporennebel | **The Rotmother** mit zwei Tentakeln |
 
 Punkte, Leben, Waffen und Granaten wandern von Level zu Level mit.
 
@@ -44,7 +45,7 @@ node server.js
 
 Dann <http://localhost:5190> öffnen. Die Musik liegt in `music/`. Welcher Song wo läuft, steht in `LEVELS` in `public/js/level.js`: gesucht wird
 jeweils ein Namensteil („metal man“, „king of steel“), sonst nimmt das Spiel den ersten Song im Ordner.
-Level 1 und 3 laufen auf *Metal man*, Level 2 und 4 auf *King of steel*, und zum Boss wird jeweils auf den
+Level 1, 3 und 5 laufen auf *Metal man*, Level 2 und 4 auf *King of steel*, und zum Boss wird jeweils auf den
 anderen Song gewechselt.
 
 ## Steuerung
@@ -97,6 +98,8 @@ Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz dr
 - **Checkpoints:** Baken, die beim Vorbeilaufen grün werden, heilen etwas und sind der Wiedereinstieg.
 - **Fässer** explodieren in Ketten und reißen Gegner (und den Helden) mit, **Kisten** geben Beute.
 - **Sprungfelder** schießen den Helden hoch, **Säure** tut weh und schleudert ihn wieder heraus.
+- **Waten:** Im Sumpf stehen Tümpel. Im Wasser läuft der Held nur noch mit 60 % Tempo, springt niedriger,
+  fällt langsamer und kann nicht dashen. Das Wasser wird über ihm gezeichnet, er steckt also wirklich drin.
 
 ### Gegner
 
@@ -117,6 +120,10 @@ Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz dr
 | Gleiterreiter | rast auf dem Hover-Bike vorbei und feuert im Vorbeiflug |
 | Dornenpflanze | reißt ihren Schlund auf und spuckt einen Fächer aus Stacheln |
 | Mörserläufer | vierbeiniger Walker, wirft Granaten im hohen Bogen; ein Ring am Boden zeigt den Einschlag an |
+| Blutegel | kriecht an Land, schwimmt im Wasser deutlich schneller und schnellt auf den Helden zu |
+| Stechfliege | schwirrt über dem Helden und sticht im Sturzflug zu |
+| Sporenpilz | bläst Sporenwolken aus, die auf den Helden zutreiben und langsam vergiften |
+| Schlammkoloss | sein Panzerrücken hält Schüsse von vorn ab; wenn er brüllt, ist er offen und stürmt los |
 
 Alle Bosse haben drei Phasen und einen Kern beziehungsweise Schlund, der deutlich mehr Schaden nimmt:
 
@@ -125,6 +132,7 @@ Alle Bosse haben drei Phasen und einen Kern beziehungsweise Schlund, der deutlic
 | **Spaceboss** | Fächer aus der Armkanone, Augen-Salven, Bodenschockwellen (drüberspringen), Orbitalschläge mit Vorwarnung, Drohnen-Nachschub, Ringsalven |
 | **Hive Queen** | Säureregen über die ganze Arena, Fächer, frisch gelegte Krabbler, Fledermausschwärme, Schockwellen, Ringsalven |
 | **Endform** | alles davon, schneller, dazu ein waagrechter Laser: tief heißt drüberspringen, hoch heißt ducken (die Warnung sagt an, was) |
+| **The Rotmother** | sitzt im Tümpel und schlägt mit zwei Tentakeln zu: einer hebt sich hoch und knallt herunter (Schockwellen nach beiden Seiten), einer fegt flach über den Boden (drüberspringen). Dazu speit sie Säure im Bogen, bläst Sporenwolken, ruft Brut und taucht ab, um woanders wieder aufzutauchen. Ihr Eiersack ist die Schwachstelle |
 | **The Devourer** | wandert als Hügel unter dem Sand heran, bricht mit Vorwarnung heraus und fliegt im Bogen über die Arena. Dabei speit er Feuerbrocken, lässt Sandfontänen aufsteigen, spuckt Sandwürmer aus und feuert Ringsalven. Sein Panzer schluckt 55 % des Schadens, voll trifft nur der glühende Schlund (dann 2,4-facher Schaden) |
 
 **Alle Bosse sind wie der Held aus Einzelteilen zusammengesetzt.** Die beiden Zweibeiner haben ein Skelett: Die Hüfte
@@ -138,6 +146,7 @@ beim Feuern zurück und brechen im Tod in die Knie.
 |---|---|---|
 | **Spaceboss** (auch die Endform) | `boss_torso`, `boss_cannon`, `boss_claw`, `boss_leg` | der Kanonenarm zielt auf den Helden, die Mündung sitzt am Ende des Laufs; der Klauenarm holt aus und drischt beim Schlag zu |
 | **Hive Queen** | `queen_torso`, `queen_scythe`, `queen_leg`, `queen_tail` | zwei Sichelklauen (eine hinter, eine vor dem Körper), die Säure kommt aus dem Maul, der Schwanz schwingt gegen die Laufrichtung aus |
+| **The Rotmother** | `mom_body`, `mom_seg`, `mom_tip` | die Tentakel sind Seile: neun Glieder, die mit FABRIK (zwei Durchläufe) zwischen Schulter und Zielpunkt eingepasst werden. Bewegt wird nur der Zielpunkt, der Rest ergibt sich |
 | **The Devourer** | `dev_maw`, `dev_seg`, `dev_arm` | kein Skelett, sondern eine Kette: der Kopf fliegt eine Bahn, elf Segmente laufen auf dieser Bahn hinterher und werden nach hinten kleiner. Getroffen wird er über Kreise statt über ein Rechteck |
 
 Die Maße der Skelette stehen in `RIGS` in `game.js`, die Ansatzpunkte in den Bildern (Hüfte, Knie, Knöchel,
@@ -152,7 +161,7 @@ Schaden, werden golden dargestellt und mit „CRIT!“ beschriftet.
 
 `?play=1` (Titel überspringen), `?level=2` (Level wählen), `?zoom=1.1&on=boss` (Kamera auf den Boss), `?god=1` (unverwundbar), `?weak=1` (Boss mit
 400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?pad=1` (Gamepad-Testanzeige), `?zoom=3` (Kamera um den Helden vergrößern,
-zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 354, 231, 235 und 286.
+zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 354, 231, 235, 286 und 286.
 Zum Beispiel <http://localhost:5190/?play=1&god=1&level=4&at=283> für das Finale.
 
 Im laufenden Spiel liegt der Spielzustand als `window.SB` in der Konsole (`SB.player.hp`, `SB.boss.hp`,

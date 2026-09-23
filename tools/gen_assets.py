@@ -18,7 +18,8 @@ EXTRA_SEEDS = {"hero_torso": [11, 23, 37, 41], "hero_arm": [11, 23, 37, 41], "he
                "hero_full": [11, 23, 37, 41], "boss_torso": [11, 23, 37], "boss_cannon": [11, 23, 37],
                "boss_claw": [11, 23, 37], "boss_leg": [11, 23, 37], "queen_torso": [11, 23, 37],
                "queen_scythe": [11, 23, 37], "queen_leg": [11, 23, 37], "queen_tail": [11, 23],
-               "dev_maw": [11, 23, 37], "dev_seg": [11, 23, 37], "dev_arm": [11, 23, 37]}
+               "dev_maw": [11, 23, 37], "dev_seg": [11, 23, 37], "dev_arm": [11, 23, 37],
+               "mom_body": [11, 23, 37], "mom_seg": [11, 23], "mom_tip": [11, 23]}
 
 GREEN = ("highly detailed sci-fi video game sprite, polished 3D render, sharp clean silhouette, centered, "
          "the whole object fully visible with margin around it, isolated on a flat uniform pure bright green "
@@ -156,6 +157,36 @@ ASSETS = {
               "panoramic", GREEN, 1536, 640),
     "debris": ("a long field of crashed alien spaceship wreckage half buried in sand, broken violet hull plates, "
                "bent beams and a toppled engine nacelle, exact side view, wide panoramic", GREEN, 1536, 640),
+    # Level 5: The Swamp
+    "leech": ("a fat alien swamp leech creature, glistening dark green segmented body with a round toothed sucker "
+              "mouth wide open and small glowing yellow eyes, slimy, facing to the left, exact side view profile",
+              GREEN, 1024, 1024),
+    "stingfly": ("a big alien swamp mosquito creature with four translucent wings, a long needle proboscis, sickly "
+                 "green and brown chitin and glowing yellow eyes, front view, wings spread", GREEN, 1024, 1024),
+    "sporepod": ("a big alien swamp mushroom with a bulbous cap that opens into spore vents, pale sickly green with "
+                 "glowing yellow spots and a thick mossy stalk, side view", GREEN, 1024, 1024),
+    "mudhulk": ("a hulking armored alien swamp brute, thick mossy carapace shell on its back, heavy claws, dripping "
+                "mud and slime, hunched over, facing to the left, exact side view profile", GREEN, 1536, 1024),
+    # Endgegner von Level 5 in Einzelteilen: die Rotmother mit Tentakeln
+    "mom_body": ("the bloated limbless body of a colossal alien swamp mother creature, huge sagging sack of "
+                 "glistening dark green flesh with glowing yellow egg sacs, ribbed folds and a wide fanged maw, "
+                 "without tentacles, exact side view profile facing to the right", GREEN, 1024, 1024),
+    "mom_seg": ("a single thick segment of an alien tentacle, slimy dark green flesh with pale suckers and glowing "
+                "yellow rings, exact side view", GREEN, 1024, 1024),
+    "mom_tip": ("the tip of a thick alien tentacle with a hooked bone claw and a glowing yellow sucker mouth, slimy "
+                "dark green flesh, pointing to the right, exact side view", GREEN, 1536, 768),
+    # Sumpf: Kacheln, Hintergrund, Kulissen
+    "mud": ("alien swamp ground texture, wet dark mud with tangled roots, moss patches and small glowing yellow "
+            "fungi, " + TILE, "", 1024, 1024),
+    "bark": ("rotten alien swamp wood texture, dark wet bark planks with moss, shelf fungus and dripping slime, "
+             + TILE, "", 1024, 1024),
+    "swamp_bg": ("a vast alien swamp panorama at dusk, twisted giant mangrove trees, thick green fog, glowing "
+                 "fireflies, still black water with reflections, shafts of pale light, cinematic, wide angle",
+                 "no text, no frame, no people", 1536, 864),
+    "trees": ("a row of twisted giant alien swamp trees with hanging vines, aerial roots and glowing fungus, exact "
+              "side view, wide panoramic", GREEN, 1536, 640),
+    "reeds": ("a row of tall alien swamp reeds, dead grass tufts, bare roots and rotten stumps, exact side view, "
+              "wide panoramic", GREEN, 1536, 640),
     # Level 2: Hive Caverns
     "spitter": ("a squat biomechanical alien spitter creature with a swollen glowing acid sac on its back, dark purple "
                 "armored hide, wide open fanged mouth and glowing green eyes, crouching on short legs, facing to the "
