@@ -39,6 +39,11 @@ SPRITES = {
     "bat": ("bat_11", 300, 200),
     "saucer": ("saucer_11", 300, 200),
     "sentinel": ("sentinel_11", 260, 300),
+    # Laufgegner in Einzelteilen (Rumpf und Bein, prozedural animiert)
+    "mortar_body": ("mortar_body_51", 460, 320),
+    "mortar_leg": ("mortar_leg_23", 200, 400),
+    "mudhulk_body": ("mudhulk_body_23", 460, 460),
+    "mudhulk_leg": ("mudhulk_leg_37", 200, 400),
     # Spaceboss in Einzelteilen (wird im Spiel zusammengesetzt und animiert)
     "boss_torso": ("boss_torso_23", 700, 700),
     "boss_cannon": ("boss_cannon_23", 900, 450),

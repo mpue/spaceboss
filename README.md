@@ -126,11 +126,11 @@ Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz dr
 | Sandwurm | gräbt sich unter dem Sand heran (nur ein Hügel ist zu sehen) und bricht unter dem Helden heraus |
 | Gleiterreiter | rast auf dem Hover-Bike vorbei und feuert im Vorbeiflug |
 | Dornenpflanze | reißt ihren Schlund auf und spuckt einen Fächer aus Stacheln |
-| Mörserläufer | vierbeiniger Walker, wirft Granaten im hohen Bogen; ein Ring am Boden zeigt den Einschlag an |
+| Mörserläufer | vierbeiniger Walker auf echten Beinen, wirft Granaten im hohen Bogen; ein Ring am Boden zeigt den Einschlag an |
 | Blutegel | kriecht an Land, schwimmt im Wasser deutlich schneller und schnellt auf den Helden zu |
 | Stechfliege | schwirrt über dem Helden und sticht im Sturzflug zu |
 | Sporenpilz | bläst Sporenwolken aus, die auf den Helden zutreiben und langsam vergiften |
-| Schlammkoloss | sein Panzerrücken hält Schüsse von vorn ab; wenn er brüllt, ist er offen und stürmt los |
+| Schlammkoloss | stapft auf zwei Beinen heran, sein Panzerrücken hält Schüsse von vorn ab; wenn er brüllt, ist er offen und stürmt los |
 
 Alle Bosse haben drei Phasen und einen Kern beziehungsweise Schlund, der deutlich mehr Schaden nimmt:
 
@@ -155,6 +155,8 @@ beim Feuern zurück und brechen im Tod in die Knie.
 | **Hive Queen** | `queen_torso`, `queen_scythe`, `queen_leg`, `queen_tail` | zwei Sichelklauen (eine hinter, eine vor dem Körper), die Säure kommt aus dem Maul, der Schwanz schwingt gegen die Laufrichtung aus |
 | **The Rotmother** | `mom_body`, `mom_seg`, `mom_tip` | die Tentakel sind Seile: neun Glieder, die mit FABRIK (zwei Durchläufe) zwischen Schulter und Zielpunkt eingepasst werden. Bewegt wird nur der Zielpunkt, der Rest ergibt sich |
 | **The Devourer** | `dev_maw`, `dev_seg`, `dev_arm`, `dev_tail` | kein Skelett, sondern eine Kette: der gehörnte Echsenschädel fliegt eine Bahn, vierzehn Schuppenstücke werden zwischen den Punkten dieser Bahn aufgespannt und nach hinten immer schmaler, am Ende sitzt die Schwanzspitze. Getroffen wird er über Kreise statt über ein Rechteck |
+
+Nicht nur die Bosse laufen so: **Mörserläufer** und **Schlammkoloss** bestehen ebenfalls aus Rumpf (`mortar_body`, `mudhulk_body`) und einem einzelnen Bein (`mortar_leg`, `mudhulk_leg`), das für jedes Bein neu gebeugt wird. Der Mörserläufer setzt vier Beine im Trab, der Koloss zwei. Die Füße bleiben auf dem Boden stehen, während der Rumpf darüber weiterzieht – rutschende Sprites gibt es keine mehr. Fehlen die Teile, fällt beides auf das alte Einzelsprite zurück.
 
 Die Maße der Skelette stehen in `RIGS` in `game.js`, die Ansatzpunkte in den Bildern (Hüfte, Knie, Knöchel,
 Schulter, Mündung) in `BOSS` in `render.js`. Ein neuer Boss braucht nur einen Eintrag in beiden.

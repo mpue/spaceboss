@@ -13,7 +13,8 @@
     'boss_torso', 'boss_cannon', 'boss_claw', 'boss_leg',
     'queen_torso', 'queen_scythe', 'queen_leg', 'queen_tail',
     'sandworm', 'skimmer', 'thorn', 'mortar', 'dev_maw', 'dev_seg', 'dev_arm', 'dev_tail', 'dunes', 'debris',
-    'leech', 'stingfly', 'sporepod', 'mudhulk', 'mom_body', 'mom_seg', 'mom_tip', 'trees', 'reeds'];
+    'leech', 'stingfly', 'sporepod', 'mudhulk', 'mom_body', 'mom_seg', 'mom_tip', 'trees', 'reeds',
+    'mortar_body', 'mortar_leg', 'mudhulk_body', 'mudhulk_leg'];
   const JPGS = ['ground', 'metal', 'sky', 'title', 'explosion', 'plasma', 'cave', 'hull', 'cave_bg', 'ship_bg', 'sand', 'rust', 'desert_bg', 'mud', 'bark', 'swamp_bg'];
 
   // ---------- Eingabe ----------

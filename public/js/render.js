@@ -48,6 +48,18 @@
     },
   };
 
+  // Ansatzpunkte der Laufgegner, als Bruchteile ihrer Teilbilder (die Kunst schaut nach links)
+  const WALK = {
+    mortar: {
+      torso: { hip: { x: 0.50, y: 0.88 } },
+      leg: { hip: { x: 0.45, y: 0.07 }, knee: { x: 0.72, y: 0.49 }, ankle: { x: 0.36, y: 0.83 }, cut: 0.49 },
+    },
+    mudhulk: {
+      torso: { hip: { x: 0.62, y: 0.64 } },
+      leg: { hip: { x: 0.42, y: 0.06 }, knee: { x: 0.72, y: 0.50 }, ankle: { x: 0.42, y: 0.84 }, cut: 0.50 },
+    },
+  };
+
   function glow(color, r, core = 0.25) {
     const c = document.createElement('canvas');
     c.width = c.height = r * 2;
@@ -746,6 +758,39 @@
 
     // ---------- Gegner ----------
 
+    // Laufgegner aus Rumpf und Beinen. Liefert false, wenn die Teile fehlen,
+    // dann zeichnet drawEnemy das alte Einzelsprite.
+    drawWalker(g, e, extra) {
+      const R = GameDefs.WALKERS[e.type], F = WALK[e.type], gt = e.gait;
+      const tS = this.img[R.parts.torso];
+      if (!gt || !tS || !this.rigParts(e.type)) return false;
+      const c = this.c, flash = e.flash;
+      c.save();
+      c.translate(e.x, gt.hipY);
+      if (e.face > 0) c.scale(-1, 1);                    // die Kunst schaut nach links
+      // Die Beinbilder zeigen nach rechts, die Rümpfe nach links: Beine gespiegelt zeichnen
+      const leg = (i, dark) => {
+        c.save();
+        if (dark) c.translate(14, -5);                   // die fernen Beine stehen etwas dahinter
+        c.scale(-1, 1);
+        this.bossLeg(e.type, { x: -gt.feet[i].x, y: gt.feet[i].y }, dark);
+        c.restore();
+      };
+      for (let i = 0; i < R.legs.length; i++) if (R.legs[i].back) leg(i, true);
+      const TH = R.torsoH, TW = TH * tS.width / tS.height;
+      const tx = -F.torso.hip.x * TW, ty = -F.torso.hip.y * TH;
+      c.drawImage(tS, tx, ty, TW, TH);
+      if (flash > 0 && this.white[R.parts.torso]) {
+        c.globalAlpha = 0.7 * flash;
+        c.drawImage(this.white[R.parts.torso], tx, ty, TW, TH);
+        c.globalAlpha = 1;
+      }
+      for (let i = 0; i < R.legs.length; i++) if (!R.legs[i].back) leg(i, false);
+      c.restore();
+      if (extra) extra();
+      return true;
+    }
+
     drawEnemy(g, e) {
       const c = this.c, fl = e.flash;
       switch (e.type) {
@@ -873,10 +918,11 @@
           break;
         }
         case 'mudhulk': {
-          const bob = Math.sin(e.walk || 0) * 6;
           const k = e.charge > 0 ? 1 - e.charge / 0.7 : 0;
-          this.spr('mudhulk', e.x, e.y + bob, e.h * 1.35, { flip: e.face > 0, flash: Math.max(fl, k * 0.4),
-            sx: 1 + 0.06 * k, sy: 1 - 0.04 * k });
+          if (!this.drawWalker(g, e)) {
+            this.spr('mudhulk', e.x, e.y + Math.sin(e.walk || 0) * 6, e.h * 1.35, { flip: e.face > 0,
+              flash: Math.max(fl, k * 0.4), sx: 1 + 0.06 * k, sy: 1 - 0.04 * k });
+          }
           e.shieldHit = Math.max(0, (e.shieldHit || 0) - 0.08);
           if (e.shieldHit > 0) {
             c.globalCompositeOperation = 'lighter';
@@ -920,8 +966,8 @@
           break;
         }
         case 'mortar': {
-          const bob = Math.sin(e.walk || 0) * 5;
-          this.spr('mortar', e.x, e.y + bob, e.h * 1.35, { flip: e.face > 0, flash: fl });
+          if (!this.drawWalker(g, e)) this.spr('mortar', e.x, e.y + Math.sin(e.walk || 0) * 5, e.h * 1.35,
+            { flip: e.face > 0, flash: fl });
           c.globalCompositeOperation = 'lighter';
           this.gl(this.glows.orange, e.x, e.y - 50, 70 + (e.cd < 0.5 ? 90 * (1 - e.cd / 0.5) : 0), 0.5);
           c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
@@ -964,7 +1010,8 @@
     rigParts(kind) {
       let p = this.rigCache.get(kind);
       if (!p) {
-        const R = GameDefs.RIGS[kind], F = BOSS[kind], leg = this.img[R.parts.leg];
+        const R = GameDefs.RIGS[kind] || GameDefs.WALKERS[kind], F = BOSS[kind] || WALK[kind];
+        const leg = this.img[R.parts.leg];
         if (!leg) return null;
         p = {
           legTop: slice(leg, 0, F.leg.cut + 0.05),
@@ -981,7 +1028,9 @@
 
     // Bein aus Oberschenkel und Unterschenkel, Kniewinkel aus Zwei-Knochen-IK
     bossLeg(kind, foot, dark) {
-      const R = GameDefs.RIGS[kind], B = BOSS[kind], P = this.rigParts(kind);
+      const R = GameDefs.RIGS[kind] || GameDefs.WALKERS[kind], B = BOSS[kind] || WALK[kind];
+      const P = this.rigParts(kind);
+      if (!P) return;
       const l1 = R.thigh, l2 = R.shin;
       const d = clamp(Math.hypot(foot.x, foot.y), Math.abs(l1 - l2) + 4, l1 + l2 - 4);
       const a = Math.atan2(foot.y, foot.x);

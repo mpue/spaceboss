@@ -19,7 +19,9 @@ EXTRA_SEEDS = {"hero_torso": [11, 23, 37, 41], "hero_arm": [11, 23, 37, 41], "he
                "boss_claw": [11, 23, 37], "boss_leg": [11, 23, 37], "queen_torso": [11, 23, 37],
                "queen_scythe": [11, 23, 37], "queen_leg": [11, 23, 37], "queen_tail": [11, 23],
                "dev_maw": [11, 23, 37], "dev_seg": [11, 23, 37], "dev_arm": [11, 23, 37], "dev_tail": [11, 23],
-               "mom_body": [11, 23, 37], "mom_seg": [11, 23], "mom_tip": [11, 23]}
+               "mom_body": [11, 23, 37], "mom_seg": [11, 23], "mom_tip": [11, 23],
+               "mortar_body": [11, 23, 37], "mortar_leg": [11, 23, 37],
+               "mudhulk_body": [11, 23, 37], "mudhulk_leg": [11, 23, 37]}
 
 GREEN = ("highly detailed sci-fi video game sprite, polished 3D render, sharp clean silhouette, centered, "
          "the whole object fully visible with margin around it, isolated on a flat uniform pure bright green "
@@ -136,6 +138,15 @@ ASSETS = {
               GREEN, 1024, 1024),
     "mortar": ("a four legged alien mortar walker machine, armored sand colored hull with a short thick mortar tube "
                "pointing up and glowing orange lights, facing to the left, exact side view profile", GREEN, 1536, 1024),
+    # Der Mörserläufer wird prozedural animiert, darum Rumpf und Bein getrennt
+    "mortar_body": ("a single compact sand colored armored turret pod hovering alone in empty space, battered "
+                    "armor plates, a short thick mortar tube pointing up and glowing orange lights, four empty "
+                    "round ball sockets on the flat underside, amputated, legless, no legs, no feet, nothing "
+                    "below the hull, facing to the left, exact side view profile", GREEN, 1024, 1024),
+    "mortar_leg": ("a single mechanical walker leg of a sand colored armored machine with a reverse digitigrade "
+                   "knee, from the hip joint down to a heavy two toed metal foot, battered armor plates and dark "
+                   "hydraulic pistons, standing straight and vertical, exact side view, foot pointing to the "
+                   "right, nothing else", GREEN, 768, 1536),
     # Der Endgegner von Level 4 in Einzelteilen: ein riesiger Sandleviathan
     "dev_maw": ("the head of a colossal desert serpent, scaled reptilian skull with curved horns and a heavy bony "
                 "brow, slit amber eyes, jaws wide open with long fangs and a glowing orange throat, sand colored "
@@ -170,6 +181,15 @@ ASSETS = {
                  "glowing yellow spots and a thick mossy stalk, side view", GREEN, 1024, 1024),
     "mudhulk": ("a hulking armored alien swamp brute, thick mossy carapace shell on its back, heavy claws, dripping "
                 "mud and slime, hunched over, facing to the left, exact side view profile", GREEN, 1536, 1024),
+    # Der Schlammkoloss wird prozedural animiert, darum Rumpf und Bein getrennt
+    "mudhulk_body": ("the severed upper half of a hulking armored alien swamp brute floating alone in empty "
+                     "space, thick mossy carapace shell on the back, heavy clawed arms hanging down, dripping mud "
+                     "and slime, the torso ends in a smooth flat stump just below the ribs, amputated, legless, "
+                     "no legs, no hips, no feet, hunched over, facing to the left, exact side view profile",
+                     GREEN, 1024, 1024),
+    "mudhulk_leg": ("a single thick leg of a hulking armored alien swamp brute, from the hip down to a broad three "
+                    "toed clawed foot, mossy green armored hide with mud and slime, standing straight and "
+                    "vertical, exact side view, claws pointing to the right, nothing else", GREEN, 768, 1536),
     # Endgegner von Level 5 in Einzelteilen: die Rotmother mit Tentakeln
     "mom_body": ("the bloated limbless body of a colossal alien swamp mother creature, huge sagging sack of "
                  "glistening dark green flesh with glowing yellow egg sacs, ribbed folds and a wide fanged maw, "

@@ -54,6 +54,31 @@
     boss: { w: 440, h: 600, hp: 4200, score: 25000, dmg: 30, coins: 60 },
   };
 
+  // Gegner, die wirklich laufen: Rumpf und Beine sind getrennte Teile mit Zwei-Knochen-IK.
+  // Anders als beim Boss schaut die Gegnerkunst nach links, vorn ist hier also -x.
+  const WALKERS = {
+    mortar: {
+      parts: { torso: 'mortar_body', leg: 'mortar_leg' },
+      torsoH: 165, stand: 112, thigh: 58, shin: 64, step: 104, lift: 26, bob: 6,
+      // Vier Beine im Trab: je ein fernes und ein nahes vorn und hinten, diagonal versetzt.
+      // Die Kunst schaut nach links, vorn ist also -x.
+      legs: [
+        { rest: 62, phase: 0.00, back: true },
+        { rest: -58, phase: 0.50, back: true },
+        { rest: 74, phase: 0.50, back: false },
+        { rest: -70, phase: 0.00, back: false },
+      ],
+    },
+    mudhulk: {
+      parts: { torso: 'mudhulk_body', leg: 'mudhulk_leg' },
+      torsoH: 210, stand: 106, thigh: 54, shin: 60, step: 96, lift: 22, bob: 8,
+      legs: [
+        { rest: 14, phase: 0.50, back: true },
+        { rest: -8, phase: 0.00, back: false },
+      ],
+    },
+  };
+
   // Der Spaceboss aus Einzelteilen: Maße in Weltpixeln, Blickrichtung nach rechts gerechnet
   // (im Spiel schaut er nach links, das Zeichnen spiegelt). Hüfte ist der Nullpunkt des Skeletts.
   const RIGS = {
@@ -843,6 +868,43 @@
       return { x0: e.x - e.w / 2, y0: e.y - e.h / 2, x1: e.x + e.w / 2, y1: e.y + e.h / 2 };
     }
 
+    // Schrittzyklus für Gegner mit echten Beinen: die Füße stehen auf dem Boden,
+    // während der Rumpf darüber weiterläuft. Gleiche Rechnung wie beim Boss.
+    walkerGait(e, dt) {
+      const R = WALKERS[e.type];
+      const gy = e.y + e.h / 2;                         // Höhe der Sohlen
+      if (!e.gait) e.gait = { walk: rnd(0, 1), dir: 1, feet: R.legs.map(L => ({ x: L.rest, y: R.stand })) };
+      const gt = e.gait, sp = e.vx;
+      const moving = Math.abs(sp) > 20;
+      if (moving) gt.dir = Math.sign(sp) * -e.face;     // Laufrichtung im Rumpfsystem
+      const prev = gt.walk;
+      gt.walk += moving ? Math.abs(sp) * dt / R.step : dt * 0.3;
+      gt.bob = moving ? -Math.abs(Math.sin(gt.walk * TAU)) * R.bob : Math.sin(e.t * 1.8) * R.bob * 0.35;
+      gt.hipY = gy - R.stand + gt.bob;
+      for (let i = 0; i < R.legs.length; i++) {
+        const L = R.legs[i], f = gt.feet[i];
+        const ph = ((gt.walk + L.phase) % 1 + 1) % 1;
+        const base = R.stand - gt.bob;                  // Boden von der Hüfte aus gesehen
+        if (!moving) {
+          f.x = lerp(f.x, L.rest, 1 - Math.pow(0.02, dt));
+          f.y = base;
+        } else if (ph < 0.6) {                          // Standbein: schiebt den Rumpf
+          f.x = L.rest + (0.5 - ph / 0.6) * R.step * gt.dir;
+          f.y = base;
+        } else {                                        // Schwungbein: hebt ab und setzt vorn auf
+          const u = (ph - 0.6) / 0.4;
+          f.x = L.rest + (-0.5 + u) * R.step * gt.dir;
+          f.y = base - Math.sin(u * Math.PI) * R.lift;
+        }
+      }
+      // Tritte: je halbem Zyklus staubt es unter dem Fuß
+      const half = Math.floor(gt.walk * 2) !== Math.floor(prev * 2);
+      if (half && moving && Math.abs(e.x - this.cam.x - W / 2) < W * 0.6) {
+        this.dust(e.x, gy, 3);
+        if (Math.abs(e.x - this.player.x) < 900) this.audio.thud();
+      }
+    }
+
     updateEnemy(e, dt) {
       e.t += dt;
       const cool = 1 / (1 + 1.2 * this.ease);     // zu Beginn zählen die Feuerpausen langsamer herunter
@@ -1200,6 +1262,7 @@
         }
         case 'boss': this.updateBoss(e, dt); break;
       }
+      if (WALKERS[e.type] && !e.dead) this.walkerGait(e, dt);
       // Berührung
       if (alive && !e.intro && e.type !== 'boss' && p.inv <= 0) {
         const hb = this.hitbox(e), m = 10;
@@ -2470,5 +2533,5 @@
   }
 
   window.Game = Game;
-  window.GameDefs = { P, WEAPONS, ORDER, EN, BOSSES, RIGS, W, H };
+  window.GameDefs = { P, WEAPONS, ORDER, EN, BOSSES, RIGS, WALKERS, W, H };
 })();
