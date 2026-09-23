@@ -1743,7 +1743,7 @@
       else if (Math.sin(t * 4) > -0.4) this.glowText(s.touch ? 'TAP TO START' : 'PRESS ENTER / START / CLICK', `900 40px ${FONT}`, '#ffffff', '#ff8a2a', 18, W / 2, 935);
       const help = s.device === 'gamepad'
         ? 'L-STICK MOVE   R-STICK AIM   A JUMP (x2 JETPACK, HOLD = HOVER)   RT/X FIRE   LT/B DASH   RB GRENADE   LB/Y WEAPON   START PAUSE'
-        : 'A/D MOVE   MOUSE AIM   LMB FIRE   SPACE JUMP (x2 JETPACK, HOLD = HOVER)   SHIFT DASH   RMB/G GRENADE   Q/E/WHEEL WEAPON   S DUCK';
+        : 'A/D MOVE   MOUSE AIM   LMB FIRE   SPACE JUMP (x2 JETPACK, HOLD = HOVER)   SHIFT DASH   RMB/G GRENADE   Q/E/WHEEL WEAPON   S DUCK   F FULLSCREEN';
       this.glowText(help, `600 20px ${FONT}`, '#9ad8ff', '#000', 0, W / 2, 1010);
       if (s.device !== 'gamepad')
         this.glowText('NO MOUSE?  ARROWS AIM + J FIRE + K JUMP + L DASH', `600 18px ${FONT}`, '#6a8aa0', '#000', 0, W / 2, 1045);

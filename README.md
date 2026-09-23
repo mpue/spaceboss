@@ -70,7 +70,7 @@ anderen Song gewechselt.
 | Esc / P | Start oder Back | Pause |
 | Enter | A oder Start | Menüs: starten und weiter |
 | ← → | D-Pad / linker Stick | Levelauswahl: Karte wählen |
-| F | | Vollbild |
+| F | | Vollbild – **nur im Titel, in der Levelauswahl und in der Pause**, damit man es im Spiel nicht aus Versehen neben D erwischt. Im Spiel geht es per Doppelklick |
 
 Ohne Maus (Tastatur allein): Pfeile laufen und zielen (hoch, schräg, in der Luft nach unten),
 K springt, J feuert, L dasht. Das Spiel schaltet automatisch um, sobald die Maus bewegt wird.

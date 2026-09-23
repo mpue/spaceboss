@@ -45,7 +45,8 @@
     if (['ArrowRight', 'KeyD'].includes(e.code)) pressed.menuRight = true;
     if (e.code === 'Escape') pressed.back = true;
     if (e.code === 'Escape' || e.code === 'KeyP') pressed.pause = true;
-    if (e.code === 'KeyF') toggleFullscreen();
+    // Vollbild nur in den Menüs: im Spiel liegt F direkt neben D und wurde dauernd aus Versehen getroffen
+    if (e.code === 'KeyF' && mode !== 'play') toggleFullscreen();
     if (e.code === 'F3') { showFps = !showFps; e.preventDefault(); }
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     unlock();
@@ -73,6 +74,7 @@
     unlock();
   });
   addEventListener('mouseup', e => { if (e.button === 0) mouse.down = false; if (e.button === 2) mouse.right = false; });
+  canvas.addEventListener('dblclick', () => toggleFullscreen());   // im Spiel geht Vollbild per Doppelklick
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('wheel', e => { if (e.deltaY > 0) pressed.next = true; else if (e.deltaY < 0) pressed.prev = true; e.preventDefault(); }, { passive: false });
 
