@@ -18,7 +18,7 @@ EXTRA_SEEDS = {"hero_torso": [11, 23, 37, 41], "hero_arm": [11, 23, 37, 41], "he
                "hero_full": [11, 23, 37, 41], "boss_torso": [11, 23, 37], "boss_cannon": [11, 23, 37],
                "boss_claw": [11, 23, 37], "boss_leg": [11, 23, 37], "queen_torso": [11, 23, 37],
                "queen_scythe": [11, 23, 37], "queen_leg": [11, 23, 37], "queen_tail": [11, 23],
-               "dev_maw": [11, 23, 37], "dev_seg": [11, 23, 37], "dev_arm": [11, 23, 37],
+               "dev_maw": [11, 23, 37], "dev_seg": [11, 23, 37], "dev_arm": [11, 23, 37], "dev_tail": [11, 23],
                "mom_body": [11, 23, 37], "mom_seg": [11, 23], "mom_tip": [11, 23]}
 
 GREEN = ("highly detailed sci-fi video game sprite, polished 3D render, sharp clean silhouette, centered, "
@@ -137,14 +137,17 @@ ASSETS = {
     "mortar": ("a four legged alien mortar walker machine, armored sand colored hull with a short thick mortar tube "
                "pointing up and glowing orange lights, facing to the left, exact side view profile", GREEN, 1536, 1024),
     # Der Endgegner von Level 4 in Einzelteilen: ein riesiger Sandleviathan
-    "dev_maw": ("the head of a colossal armored sand leviathan, huge round maw ringed with fangs and a glowing "
-                "orange throat, heavy sand colored armor plates with glowing orange seams, curved horns, facing to "
-                "the left, exact side view profile", GREEN, 1024, 1024),
-    "dev_seg": ("a single armored body segment of a colossal sand leviathan, thick ring of heavy sand colored plates "
-                "with glowing orange seams and short spikes, exact side view", GREEN, 1024, 1024),
-    "dev_arm": ("a huge clawed arm of a sand leviathan, armored sand colored chitin with glowing orange seams, from "
-                "the round shoulder joint to the long claw tips, stretched straight out horizontally, claws pointing "
-                "to the right, exact side view", GREEN, 1536, 768),
+    "dev_maw": ("the head of a colossal desert serpent, scaled reptilian skull with curved horns and a heavy bony "
+                "brow, slit amber eyes, jaws wide open with long fangs and a glowing orange throat, sand colored "
+                "scales with dark bands, facing to the left, exact side view profile", GREEN, 1024, 1024),
+    "dev_seg": ("a straight section of the body of a colossal desert serpent seen exactly from the side, thick "
+                "scaled reptilian hide with a ridge of spines along the back and pale belly scutes, sand colored "
+                "with dark bands, horizontal, nothing else", GREEN, 1536, 768),
+    "dev_tail": ("the tail end of a colossal desert serpent, tapering scaled reptile tail with a ridge of spines "
+                 "and a spiked tip, tip pointing to the right, exact side view, nothing else", GREEN, 1536, 768),
+    "dev_arm": ("a huge clawed arm of a desert serpent, scaled sand colored reptile hide with dark bands and bone "
+                "claws, from the round shoulder joint to the long claw tips, stretched straight out horizontally, "
+                "claws pointing to the right, exact side view", GREEN, 1536, 768),
     # Wüste: Kacheln, Hintergrund, Kulissen
     "sand": ("alien desert ground texture, red orange sand with small dark pebbles, cracked dry crust and thin "
              "wind ripples, " + TILE, "", 1024, 1024),

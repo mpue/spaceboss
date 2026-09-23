@@ -102,8 +102,8 @@
     // Der Devourer: eine Kette aus Segmenten, die dem Kopf hinterherläuft
     worm: {
       kind: 'chain',
-      parts: { head: 'dev_maw', seg: 'dev_seg', arm: 'dev_arm' },
-      headH: 360, segH: 300, segs: 11, spacing: 132, taper: 0.945,
+      parts: { head: 'dev_maw', seg: 'dev_seg', arm: 'dev_arm', tail: 'dev_tail' },
+      headH: 360, segH: 330, segs: 14, spacing: 100, taper: 0.935,
       armLen: 330, armAt: 1,
       mouth: { x: -150, y: 10 },         // Maul relativ zum Kopf (Kopf zeigt nach -x)
       core: { x: -120, y: 0, r: 85 },    // glühender Schlund: die Schwachstelle

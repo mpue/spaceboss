@@ -55,8 +55,9 @@ SPRITES = {
     "thorn": ("thorn_11", 260, 320),
     "mortar": ("mortar_11", 460, 320),
     "dev_maw": ("dev_maw_23", 700, 700),
-    "dev_seg": ("dev_seg_23", 500, 500),
-    "dev_arm": ("dev_arm_11", 800, 400),
+    "dev_seg": ("dev_seg_11", 700, 360),
+    "dev_tail": ("dev_tail_11", 800, 400),
+    "dev_arm": ("dev_arm_23", 800, 400),
     "dunes": ("dunes_23", 1536, 640),
     "debris": ("debris_11", 1536, 640),
     # Level 5: The Swamp

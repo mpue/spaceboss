@@ -10,7 +10,7 @@ Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch fünf
 | 1 **CRASH SITE** | Planetenoberfläche: Säuregruben, Bunker, Felstürme | **Spaceboss** – wird zurückgeschlagen und zieht sich zurück |
 | 2 **HIVE CAVERNS** | organische Alien-Höhlen mit Säureflüssen und Brutkammern | **Hive Queen** |
 | 3 **MOTHERSHIP** | im Inneren des Mutterschiffs, Lasertore und Aufzugsschächte | **Spaceboss in der Endform** |
-| 4 **THE OUTBACKS** | rote Wüste mit Treibsand, Wrackfeldern und Sandsturm, zwei Sonnen am Horizont | **The Devourer**, ein Sandleviathan |
+| 4 **THE OUTBACKS** | rote Wüste mit Treibsand, Wrackfeldern und Sandsturm, zwei Sonnen am Horizont | **The Devourer**, ein Sandleviathan (eine gepanzerte Riesenechse) |
 | 5 **THE SWAMP** | Sumpf mit watbaren Tümpeln, Totholz, Giftschlamm und Sporennebel | **The Rotmother** mit zwei Tentakeln |
 
 Punkte, Leben, Waffen und Granaten wandern von Level zu Level mit.
@@ -154,7 +154,7 @@ beim Feuern zurück und brechen im Tod in die Knie.
 | **Spaceboss** (auch die Endform) | `boss_torso`, `boss_cannon`, `boss_claw`, `boss_leg` | der Kanonenarm zielt auf den Helden, die Mündung sitzt am Ende des Laufs; der Klauenarm holt aus und drischt beim Schlag zu |
 | **Hive Queen** | `queen_torso`, `queen_scythe`, `queen_leg`, `queen_tail` | zwei Sichelklauen (eine hinter, eine vor dem Körper), die Säure kommt aus dem Maul, der Schwanz schwingt gegen die Laufrichtung aus |
 | **The Rotmother** | `mom_body`, `mom_seg`, `mom_tip` | die Tentakel sind Seile: neun Glieder, die mit FABRIK (zwei Durchläufe) zwischen Schulter und Zielpunkt eingepasst werden. Bewegt wird nur der Zielpunkt, der Rest ergibt sich |
-| **The Devourer** | `dev_maw`, `dev_seg`, `dev_arm` | kein Skelett, sondern eine Kette: der Kopf fliegt eine Bahn, elf Segmente laufen auf dieser Bahn hinterher und werden nach hinten kleiner. Getroffen wird er über Kreise statt über ein Rechteck |
+| **The Devourer** | `dev_maw`, `dev_seg`, `dev_arm`, `dev_tail` | kein Skelett, sondern eine Kette: der gehörnte Echsenschädel fliegt eine Bahn, vierzehn Schuppenstücke werden zwischen den Punkten dieser Bahn aufgespannt und nach hinten immer schmaler, am Ende sitzt die Schwanzspitze. Getroffen wird er über Kreise statt über ein Rechteck |
 
 Die Maße der Skelette stehen in `RIGS` in `game.js`, die Ansatzpunkte in den Bildern (Hüfte, Knie, Knöchel,
 Schulter, Mündung) in `BOSS` in `render.js`. Ein neuer Boss braucht nur einen Eintrag in beiden.

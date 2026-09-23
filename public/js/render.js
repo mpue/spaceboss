@@ -36,6 +36,7 @@
     worm: {
       head: { a: { x: 0.85, y: 0.5 }, b: { x: 0.05, y: 0.5 } },   // Nacken -> Maul (Kopf zeigt nach links)
       arm: { a: { x: 0.08, y: 0.50 }, b: { x: 0.97, y: 0.50 } },
+      tail: { a: { x: 0.02, y: 0.45 }, b: { x: 0.98, y: 0.5 } },  // Ansatz -> Spitze
     },
     queen: {
       torso: { hip: { x: 0.45, y: 0.97 } },
@@ -1112,20 +1113,36 @@
         c.moveTo(m.x - 150, m.y + 4); c.quadraticCurveTo(m.x + 20, m.y - 30, m.x + 150, m.y + 4); c.fill();
       }
       const segs = e.segs || [];
-      const segIm = I[R.parts.seg], headIm = I[R.parts.head], armIm = I[R.parts.arm];
+      const segIm = I[R.parts.seg], headIm = I[R.parts.head], armIm = I[R.parts.arm], tailIm = I[R.parts.tail];
       if (!segIm || !headIm) return;
-      // Segmente von hinten nach vorn
+      // Schwanzspitze ganz hinten
+      if (tailIm && segs.length > 1) {
+        const last = segs[segs.length - 1], prev = segs[segs.length - 2];
+        const ang = Math.atan2(last.y - prev.y, last.x - prev.x);
+        const h = R.segH * last.s * 0.9, wdt = h * tailIm.width / tailIm.height;
+        c.save();
+        c.translate(last.x, last.y);
+        c.rotate(ang);
+        if (Math.cos(ang) < 0) c.scale(1, -1);     // Rückenkamm zeigt immer nach oben
+        c.drawImage(tailIm, -wdt * 0.1, -h / 2, wdt, h);
+        c.restore();
+      }
+      // Körper: ein Schuppenstück je Abschnitt, von hinten nach vorn übereinander
       for (let i = segs.length - 1; i >= 0; i--) {
-        const s = segs[i], h = R.segH * s.s;
-        const wdt = h * segIm.width / segIm.height;
+        const s = segs[i];
+        const nx = i === 0 ? { x: w.x, y: w.y } : segs[i - 1];      // Richtung zum Kopf
+        const ang = Math.atan2(nx.y - s.y, nx.x - s.x);
+        const len = Math.hypot(nx.x - s.x, nx.y - s.y) * 1.45 + 20;
+        const h = R.segH * s.s;
         c.save();
         c.translate(s.x, s.y);
-        c.rotate(s.ang);
-        c.scale(0.5, 1.05);                       // der Ring wird zur Panzerplatte im Profil
-        c.drawImage(segIm, -wdt / 2, -h / 2, wdt, h);
+        c.rotate(ang);
+        if (Math.cos(ang) < 0) c.scale(1, -1);
+        c.drawImage(segIm, -len * 0.25, -h / 2, len, h);
         if (flash > 0 && this.white[R.parts.seg]) {
           c.globalAlpha = 0.7 * flash;
-          c.drawImage(this.white[R.parts.seg], -wdt / 2, -h / 2, wdt, h);
+          c.drawImage(this.white[R.parts.seg], -len * 0.25, -h / 2, len, h);
+          c.globalAlpha = 1;
         }
         c.restore();
       }
@@ -1159,7 +1176,7 @@
       c.globalCompositeOperation = 'lighter';
       this.gl(col, m.x, m.y, 150 + 220 * (w.mouth || 0) + 30 * Math.sin(g.time * 8), 0.5 + 0.4 * (w.mouth || 0));
       if (e.crit > 0) this.gl(this.glows.gold, m.x, m.y, 240 * Math.min(1, e.crit * 4), Math.min(1, e.crit * 4));
-      for (const s of segs) this.gl(col, s.x, s.y, 90 * s.s, 0.18 + 0.1 * rage);
+      for (const s of segs) this.gl(col, s.x, s.y, 70 * s.s, 0.08 + 0.08 * rage);
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       this.bossWaves(g);
     }
