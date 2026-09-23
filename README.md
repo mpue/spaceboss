@@ -15,6 +15,12 @@ Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch fünf
 
 Punkte, Leben, Waffen und Granaten wandern von Level zu Level mit.
 
+Nach dem Titel kommt die **Levelauswahl**: eine Karte je Level mit dem Schauplatz als Bild, dem Namen des
+Bosses und, sobald es geschafft ist, einem **CLEARED** und der besten Punktzahl. Damit lässt sich jedes Level
+direkt starten. Gewählt wird mit ← →, D-Pad, linkem Stick oder Maus, gestartet mit Enter, A oder Klick auf
+die Karte, zurück zum Titel mit Esc oder B. Die Bestwerte liegen im Browser (`localStorage`), nach dem
+letzten Level und nach einem Game Over landet man wieder in der Auswahl.
+
 ## Starten mit Docker Compose
 
 ```bash
@@ -63,6 +69,7 @@ anderen Song gewechselt.
 | S | Stick unten / D-Pad unten | ducken, mit Sprung durch Plattformen fallen |
 | Esc / P | Start oder Back | Pause |
 | Enter | A oder Start | Menüs: starten und weiter |
+| ← → | D-Pad / linker Stick | Levelauswahl: Karte wählen |
 | F | | Vollbild |
 
 Ohne Maus (Tastatur allein): Pfeile laufen und zielen (hoch, schräg, in der Luft nach unten),
@@ -160,7 +167,7 @@ Schaden, werden golden dargestellt und mit „CRIT!“ beschriftet.
 ## Test-Schalter
 
 `?play=1` (Titel überspringen), `?level=2` (Level wählen), `?zoom=1.1&on=boss` (Kamera auf den Boss), `?god=1` (unverwundbar), `?weak=1` (Boss mit
-400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?pad=1` (Gamepad-Testanzeige), `?zoom=3` (Kamera um den Helden vergrößern,
+400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?select=1` (direkt in die Levelauswahl), `?pad=1` (Gamepad-Testanzeige), `?zoom=3` (Kamera um den Helden vergrößern,
 zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 354, 231, 235, 286 und 286.
 Zum Beispiel <http://localhost:5190/?play=1&god=1&level=4&at=283> für das Finale.
 

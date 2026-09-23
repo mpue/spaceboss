@@ -213,7 +213,7 @@
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.globalAlpha = 1;
       c.globalCompositeOperation = 'source-over';
-      if (!g) { this.drawTitle(screen); return; }
+      if (!g) { if (screen.select) this.drawSelect(screen); else this.drawTitle(screen); return; }
       if (!this.levelCache || this.levelCache.L !== g.L) this.prepLevel(g.L);
       const sh = g.shake * g.shake;
       const ox = (Math.random() * 2 - 1) * 26 * sh, oy = (Math.random() * 2 - 1) * 20 * sh;
@@ -1629,6 +1629,90 @@
       });
       if (g.endT > 2 && Math.sin(g.time * 5) > -0.3) this.glowText('PRESS ENTER / START', `700 30px ${FONT}`, '#ffd24a', '#ff7a00', 10, W / 2, 820);
       c.globalAlpha = 1;
+    }
+
+    // ---------- Levelauswahl ----------
+
+    // Bild passend in ein Rechteck einpassen (Ausschnitt, kein Verzerren)
+    cover(img, x, y, w, h) {
+      const s = Math.max(w / img.width, h / img.height);
+      const iw = img.width * s, ih = img.height * s;
+      this.c.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
+    }
+
+    drawSelect(s) {
+      const c = this.c, t = s.time, cards = s.select.cards, sel = s.select.sel, best = s.select.best || [];
+      const cur = cards[sel];
+      // Hintergrund: der Schauplatz des gewählten Levels
+      const bg = this.img[cur.def.theme.sky];
+      c.fillStyle = '#05070c'; c.fillRect(0, 0, W, H);
+      if (bg) {
+        c.globalAlpha = 0.55;
+        this.cover(bg, -30 + Math.sin(t * 0.2) * 20, -20, W + 60, H + 40);
+        c.globalAlpha = 1;
+      }
+      const gr = c.createLinearGradient(0, 0, 0, H);
+      gr.addColorStop(0, 'rgba(2,4,10,0.85)'); gr.addColorStop(0.45, 'rgba(2,4,10,0.55)'); gr.addColorStop(1, 'rgba(2,4,10,0.95)');
+      c.fillStyle = gr; c.fillRect(0, 0, W, H);
+      c.drawImage(this.vig, 0, 0, W, H);
+
+      this.glowText('SELECT STAGE', `900 74px ${FONT}`, '#fff4e0', '#ff8a2a', 24, W / 2, 200);
+      this.glowText(cur.def.sub, `700 26px ${FONT}`, '#ffd9a0', '#ff7a00', 8, W / 2, 250);
+
+      for (const card of cards) {
+        const on = card.i === sel;
+        const k = on ? 1.1 : 1;
+        const w = card.w * k, h = card.h * k;
+        const x = card.x + (card.w - w) / 2, y = card.y + (card.h - h) / 2 - (on ? 14 : 0);
+        const b = best[card.i] || {};
+        c.save();
+        // Bild des Levels als Kartenmotiv
+        c.beginPath();
+        roundRect(c, x, y, w, h, 14);
+        c.clip();
+        const im = this.img[card.def.theme.sky];
+        c.globalAlpha = on ? 1 : 0.5;
+        if (im) this.cover(im, x, y, w, h);
+        else { c.fillStyle = '#1a2230'; c.fillRect(x, y, w, h); }
+        const g2 = c.createLinearGradient(0, y + h * 0.35, 0, y + h);
+        g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, 'rgba(0,0,0,0.9)');
+        c.fillStyle = g2; c.fillRect(x, y + h * 0.35, w, h * 0.65);
+        c.globalAlpha = 1;
+        c.restore();
+        // Rahmen
+        c.save();
+        roundRect(c, x, y, w, h, 14);
+        c.strokeStyle = on ? '#ffd24a' : 'rgba(255,255,255,0.25)';
+        c.lineWidth = on ? 4 : 2;
+        if (on) { c.shadowColor = '#ff8a2a'; c.shadowBlur = 24; }
+        c.stroke();
+        c.restore();
+        // Beschriftung
+        this.glowText('STAGE ' + (card.i + 1), `700 20px ${FONT}`, on ? '#ffd24a' : '#9ad8ff', '#000', 0, x + 16, y + 34, 'left');
+        this.glowText(card.def.name, `900 ${on ? 30 : 26}px ${FONT}`, '#ffffff', on ? '#ff8a2a' : '#000', on ? 12 : 0,
+          x + 16, y + h - 46, 'left');
+        this.glowText(card.def.boss ? GameDefs.BOSSES[card.def.boss].name : '', `600 16px ${FONT}`,
+          on ? '#ffd9a0' : '#8aa0b0', '#000', 0, x + 16, y + h - 20, 'left');
+        if (b.cleared) {
+          this.glowText('CLEARED', `700 16px ${FONT}`, '#6aff8a', '#0a2a10', 8, x + w - 16, y + 34, 'right');
+          this.glowText(String(b.score || 0), `700 18px ${FONT}`, '#ffd24a', '#000', 0, x + w - 16, y + h - 20, 'right');
+        }
+      }
+
+      const hint = s.device === 'gamepad'
+        ? 'D-PAD / L-STICK  SELECT      A  START      B  BACK'
+        : '← →  SELECT      ENTER / CLICK  START      ESC  BACK';
+      this.glowText(hint, `700 24px ${FONT}`, '#bfe8ff', '#3fb4ff', 10, W / 2, 720);
+      if (Math.sin(t * 4) > -0.4) this.glowText('PRESS START TO DROP IN', `900 34px ${FONT}`, '#ffffff', '#ff8a2a', 16, W / 2, 800);
+      if (s.note) this.toast(s.note);
+      if (s.pad) this.padDebug(s.pad);
+      // Mauszeiger
+      if (s.cross) {
+        const { x, y } = s.cross;
+        c.strokeStyle = '#ffd24a'; c.lineWidth = 2; c.globalAlpha = 0.9;
+        c.beginPath(); c.arc(x, y, 10, 0, TAU); c.stroke();
+        c.globalAlpha = 1;
+      }
     }
 
     // ---------- Titel ----------

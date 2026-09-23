@@ -41,6 +41,9 @@
     const slot = { Digit1: 'blaster', Digit2: 'spread', Digit3: 'laser', Digit4: 'rocket' }[e.code];
     if (slot) pressed.slot = slot;
     if (e.code === 'Enter') pressed.ok = true;
+    if (['ArrowLeft', 'KeyA'].includes(e.code)) pressed.menuLeft = true;
+    if (['ArrowRight', 'KeyD'].includes(e.code)) pressed.menuRight = true;
+    if (e.code === 'Escape') pressed.back = true;
     if (e.code === 'Escape' || e.code === 'KeyP') pressed.pause = true;
     if (e.code === 'KeyF') toggleFullscreen();
     if (e.code === 'F3') { showFps = !showFps; e.preventDefault(); }
@@ -195,6 +198,10 @@
       if (pad.edge('nextW')) inp.pressed.next = true;
       if (pad.edge('prevW')) inp.pressed.prev = true;
       if (pad.edge('start') || pad.edge('back')) inp.pressed.pause = true;
+      if (pad.edge('left') || (ps.ls.x < -0.5 && !PAD.menuL)) inp.pressed.menuLeft = true;
+      if (pad.edge('right') || (ps.ls.x > 0.5 && !PAD.menuR)) inp.pressed.menuRight = true;
+      if (pad.edge('b')) inp.pressed.back = true;
+      PAD.menuL = ps.ls.x < -0.5; PAD.menuR = ps.ls.x > 0.5;
       if (pad.edge('jump') || pad.edge('start')) inp.pressed.ok = true;
       if (stickAim) inp.aimVec = { x: ps.rs.x, y: ps.rs.y };
       // rechter Stick losgelassen: die zuletzt gezielte Richtung bleibt stehen
@@ -231,7 +238,7 @@
 
   let renderer = null;
   let game = null;
-  let mode = 'title';          // title | play | pause | over | won
+  let mode = 'title';          // title | select | play | pause | over | won
   let showFps = false, fps = 0;
   let unlocked = false;
 
@@ -308,8 +315,31 @@
     return { x: p.x + Math.cos(p.aim) * d - g.cam.x, y: p.y + Math.sin(p.aim) * d - g.cam.y, soft: true };
   }
 
+  // Bestwerte je Level im Browser merken (für die Levelkarten)
+  const BEST_KEY = 'spaceboss.best';
+  function loadBest() {
+    try { return JSON.parse(localStorage.getItem(BEST_KEY)) || []; } catch (e) { return []; }
+  }
+  function saveCleared(index, score, time) {
+    try {
+      const b = loadBest();
+      const old = b[index] || {};
+      b[index] = { cleared: true, score: Math.max(old.score || 0, score), time: old.time ? Math.min(old.time, time) : time };
+      localStorage.setItem(BEST_KEY, JSON.stringify(b));
+      best = b;
+    } catch (e) { /* privater Modus: dann eben ohne */ }
+  }
+  let best = loadBest();
+
+  // Levelkarten: Lage der Karten für Maus und Zeichnung
+  function cardRects() {
+    const n = Level.LEVELS.length, cw = 300, gap = 28;
+    const total = n * cw + (n - 1) * gap, x0 = (W - total) / 2;
+    return Level.LEVELS.map((def, i) => ({ x: x0 + i * (cw + gap), y: 380, w: cw, h: 220, def, i }));
+  }
+
   const padDebug = params.get('pad') === '1';
-  let last = performance.now(), titleT = 0, fpsAcc = 0, fpsN = 0;
+  let last = performance.now(), titleT = 0, fpsAcc = 0, fpsN = 0, sel = 0;
   const startLevel = Math.max(0, Math.min(Level.LEVELS.length - 1, (Number(params.get('level')) || 1) - 1));
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
@@ -318,11 +348,29 @@
     if (fpsAcc > 0.5) { fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
     const inp = buildInput(dt);
     const loading = loaded < total ? loaded / total : 0;
-    if (mode === 'title') {
+    if (mode === 'title' || mode === 'select') {
       titleT += dt;
-      if (renderer) renderer.draw(null, { time: titleT, loading, device, note: PAD.noteT > 0 ? PAD.note : null,
-        pad: padDebug ? inp.pad : null });
-      if (!loading && (inp.pressed.ok || inp.pressed.jump)) startGame(startLevel);
+      const common = { time: titleT, loading, device, note: PAD.noteT > 0 ? PAD.note : null,
+        pad: padDebug ? inp.pad : null };
+      if (mode === 'title') {
+        if (renderer) renderer.draw(null, common);
+        if (!loading && (inp.pressed.ok || inp.pressed.jump)) { mode = 'select'; audio.confirm(); unlock(); }
+      } else {
+        // Levelauswahl
+        const cards = cardRects();
+        if (inp.pressed.menuLeft) { sel = (sel + cards.length - 1) % cards.length; audio.menuMove(); }
+        if (inp.pressed.menuRight) { sel = (sel + 1) % cards.length; audio.menuMove(); }
+        if (inp.mouseAim) {
+          const hit = cards.findIndex(c => mouse.x > c.x && mouse.x < c.x + c.w && mouse.y > c.y && mouse.y < c.y + c.h);
+          if (hit >= 0 && hit !== sel) { sel = hit; audio.menuMove(); }
+        }
+        const overCard = inp.mouseAim && cards.some(c => mouse.x > c.x && mouse.x < c.x + c.w && mouse.y > c.y && mouse.y < c.y + c.h);
+        if (inp.pressed.back) { mode = 'title'; audio.menuMove(); }
+        // mit der Maus startet nur ein Klick auf eine Karte, sonst jede Bestätigungstaste
+        else if (inp.pressed.jump || (inp.pressed.ok && (!inp.pressed.click || overCard))) startGame(sel);
+        if (renderer) renderer.draw(null, Object.assign(common, { select: { sel, cards, best },
+          cross: inp.mouseAim ? { x: mouse.x, y: mouse.y } : null }));
+      }
     } else {
       if (inp.pressed.pause && (mode === 'play' || mode === 'pause')) {
         mode = mode === 'play' ? 'pause' : 'play';
@@ -331,10 +379,14 @@
       }
       if (mode === 'play' || mode === 'over' || mode === 'won') game.update(dt, mode === 'play' ? inp : { pressed: {} });
       if (mode === 'play' && game.over) { mode = 'over'; game.endT = 0; audio.fadeMusic(2, 0.15); }
+      if (mode === 'play' && game.won && !game.saved) {
+        game.saved = true;                       // Level geschafft: Bestwert merken
+        saveCleared(game.L.index, game.score, Math.floor(game.time));
+      }
       if (mode === 'play' && game.won && game.endT > 3.5) { mode = 'won'; game.endT = 0; }
       if ((mode === 'over' || mode === 'won') && game.endT > 2 && (inp.pressed.ok || inp.pressed.jump)) {
         if (mode === 'won' && !game.L.last) startGame(game.L.index + 1, game.carry());
-        else { mode = 'title'; game = null; titleT = 0; audio.stopMusic(); audio.muffle(false); }
+        else { mode = 'select'; sel = game.L.index; game = null; titleT = 0; audio.stopMusic(); audio.muffle(false); }
       }
       if (game) renderer.draw(game, {
         mode, fps: showFps ? fps : 0, device, zoom: Number(params.get('zoom')) || 0, zoomOn: params.get('on'),
@@ -354,5 +406,6 @@
     await document.fonts.ready;
     renderer = new Renderer(canvas, images);
     if (params.get('play') === '1') startGame(startLevel);
+    else if (params.get('select') === '1') { mode = 'select'; sel = startLevel; }
   })();
 })();
