@@ -7,6 +7,7 @@
 //   #  Fels (fest)             M  Metall (fest)        =  Plattform (von unten durchspringbar)
 //   ~  Säure (tut weh)         C  Kiste (zerstörbar)   B  Fass (explodiert)
 //   w  Wasser (waten: langsamer, niedrigerer Sprung, kein Dash)
+//   {  Förderband nach links   }  Förderband nach rechts (fester Boden, der den Helden mitnimmt)
 //   P  Start                   X  Checkpoint           >  Sprungfeld
 //   c  Krabbler                d  Drohne               j  Qualle
 //   t  Geschützturm (Boden)    T  Geschützturm (Decke) b  Schwebepanzer
@@ -15,6 +16,7 @@
 //   H  Medkit    G  Granaten   S  Streuwaffe   L  Laser   R  Raketen   $  Münze
 //   W  Sandwurm   k  Gleiterreiter   h  Dornenpflanze   m  Mörserläufer
 //   l  Blutegel   f  Stechfliege   o  Sporenpilz   U  Schlammkoloss
+//   a  Alien-Soldat   e  Schwebemine   q  Warper (teleportiert sich hinter den Helden)
 //   K  Beginn der Boss-Arena   Z  Boss
 //
 // Extras (J Jetpack, Q Schild, O Overdrive, Y Magnet) stehen nicht in den Karten, sondern als
@@ -23,8 +25,8 @@
   'use strict';
 
   const T = 64, ROWS = 18;
-  const TILE = { '.': 0, '#': 1, 'M': 2, '=': 3, '~': 4, 'C': 5, 'B': 6, 'w': 7 };
-  const SOLID = [false, true, true, false, false, true, true, false];
+  const TILE = { '.': 0, '#': 1, 'M': 2, '=': 3, '~': 4, 'C': 5, 'B': 6, 'w': 7, '{': 8, '}': 9 };
+  const SOLID = [false, true, true, false, false, true, true, false, true, true];
 
   // ---------- Level 1: Absturzstelle ----------
   const CHUNKS1 = [
@@ -582,6 +584,104 @@
     ],
   ];
 
+  // ---------- Level 6: Alien Base ----------
+  const CHUNKS6 = [
+    // Landezone vor der Festung
+    [
+      '..........................$$$...........',
+      '........................=====...........',
+      '........................................',
+      '..............e.........................',
+      '..........$$$...........................',
+      '.........=====..................e.......',
+      '........................................',
+      '..P........a..........C.......a.....B...',
+      '#*', '#*', '#*',
+    ],
+    // Förderhalle: die Bänder schieben gegen den Helden und dann mit ihm
+    [
+      '........................................',
+      '.....$$$..............$$$...............',
+      '....=====............=====..............',
+      '........................................',
+      '..........e....................e........',
+      '........................................',
+      'X....a.......t..........a..........t....',
+      '#####{{{{{{{{{{{#####}}}}}}}}}}}}#######',
+      '#*', '#*',
+    ],
+    // Energiegruben
+    [
+      '...............$$$......................',
+      '..............=====.....................',
+      '........................................',
+      '........................................',
+      '........=====..........=====............',
+      '........................................',
+      'X...a...............q..>.........a..q...',
+      '#########~~~~~~~#########~~~~~~~########',
+      '#########~~~~~~~#########~~~~~~~########',
+      '#*',
+    ],
+    // Wachturm
+    [
+      '........................................',
+      '..................u.....................',
+      '........................................',
+      '.........$$$.....................$$$....',
+      '.......MMMMMMM.................=====....',
+      '.......MMMMMMM..........................',
+      '.......MMMMMMM..........................',
+      '..=====MMMMMMM.......=====..............',
+      '.......MMMMMMM..........................',
+      'X...a..MMMMMMM....n....e....a.....q.....',
+      '#*', '#*', '#*',
+    ],
+    // Kaserne mit Lasertoren
+    [
+      'M*', 'M*', 'M*',
+      '.....T..................T...............',
+      '........................................',
+      '........................................',
+      '..........$$$..............$$$..........',
+      '.........=====............=====.........',
+      '', '', '',
+      'X....a.....|.....q.......|......a....C..',
+      'M*', 'M*', 'M*',
+    ],
+    // Brücke über den Energieschlund
+    [
+      '........................................',
+      '..............$$$$$$....................',
+      '........e...........e..........e........',
+      '........................................',
+      '.......=====.......=====......=====.....',
+      '........................................',
+      'X..a................................H.a.',
+      '####{{{{~~~~~~~~~~~~~~~~~~~~~~~}}}}#####',
+      '####~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#####',
+      '#*',
+    ],
+    // Arsenal vor dem Thronhof
+    [
+      '..............$$$$$$..............',
+      '...........===========............',
+      '..................................',
+      'X.....H....S....L....R....G.......',
+      '#*', '#*', '#*',
+    ],
+    // Thronhof des Warlords
+    [
+      '..............................M',
+      '......=====..........=====....M',
+      '..............................M',
+      '..............................M',
+      '..............................M',
+      'K...................Z.........M',
+      '#*', '#*', '#*',
+    ],
+  ];
+
   // Aussehen, Musik und Boss je Level. far/near: [Bild, Dunstfarbe, Dunst, Parallaxe, Unterkante, Höhe]
   const LEVELS = [
     { name: 'CRASH SITE', sub: 'SECTOR 7  -  PLANET SURFACE', chunks: CHUNKS1, boss: 'spaceboss',
@@ -621,6 +721,15 @@
         rim: 'rgba(180,255,120,0.45)', fog: 'rgba(40,90,50,0.4)',
         acid: { top: '#a8d84a', bottom: '#2a3a10', glow: '#c8ff5a', dmg: 18 },
         water: { top: 'rgba(60,120,90,0.55)', deep: 'rgba(12,40,30,0.8)', glow: '#7affc8' } } },
+    { name: 'ALIEN BASE', sub: 'THE FORTRESS OF THE INVADERS', chunks: CHUNKS6, boss: 'warlord',
+      music: { level: 'king of steel', boss: 'metal man' },
+      extras: [[48, 'Q'], [132, 'J'], [210, 'O']],
+      theme: { ground: 'alien_floor', metal: 'alien_wall', sky: 'base_bg', far: ['citadel', '#0a0618', 0.55, 0.2, 900, 520],
+        near: ['pylons', '#08121a', 0.45, 0.42, 995, 330], wreck: false, backwall: false,
+        rim: 'rgba(80,255,230,0.55)', fog: 'rgba(60,20,110,0.35)',
+        // Energieschlamm statt Säure
+        acid: { top: '#5affe8', bottom: '#082a3a', glow: '#4affe0', dmg: 18 },
+        belt: '#4affe0' } },
   ];
 
   function build(index = 0) {

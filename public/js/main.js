@@ -14,8 +14,10 @@
     'queen_torso', 'queen_scythe', 'queen_leg', 'queen_tail',
     'sandworm', 'skimmer', 'thorn', 'mortar', 'dev_maw', 'dev_seg', 'dev_arm', 'dev_tail', 'dunes', 'debris',
     'leech', 'stingfly', 'sporepod', 'mudhulk', 'mom_body', 'mom_seg', 'mom_tip', 'trees', 'reeds',
-    'mortar_body', 'mortar_leg', 'mudhulk_body', 'mudhulk_leg', 'pu_jet', 'pu_shield', 'pu_over', 'pu_magnet'];
-  const JPGS = ['ground', 'metal', 'sky', 'title', 'explosion', 'plasma', 'cave', 'hull', 'cave_bg', 'ship_bg', 'sand', 'rust', 'desert_bg', 'mud', 'bark', 'swamp_bg'];
+    'mortar_body', 'mortar_leg', 'mudhulk_body', 'mudhulk_leg', 'pu_jet', 'pu_shield', 'pu_over', 'pu_magnet',
+    'war_torso', 'war_cannon', 'war_blade', 'war_leg', 'trooper_body', 'trooper_leg', 'hmine', 'warper',
+    'citadel', 'pylons'];
+  const JPGS = ['ground', 'metal', 'sky', 'title', 'explosion', 'plasma', 'cave', 'hull', 'cave_bg', 'ship_bg', 'sand', 'rust', 'desert_bg', 'mud', 'bark', 'swamp_bg', 'alien_floor', 'alien_wall', 'base_bg'];
 
   // ---------- Eingabe ----------
 
@@ -336,7 +338,7 @@
 
   // Levelkarten: Lage der Karten für Maus und Zeichnung
   function cardRects() {
-    const n = Level.LEVELS.length, cw = 300, gap = 28;
+    const n = Level.LEVELS.length, gap = 24, cw = Math.min(300, Math.floor((W - 120 - (n - 1) * gap) / n));
     const total = n * cw + (n - 1) * gap, x0 = (W - total) / 2;
     return Level.LEVELS.map((def, i) => ({ x: x0 + i * (cw + gap), y: 380, w: cw, h: 220, def, i }));
   }

@@ -2,8 +2,8 @@
 
 Run-and-Gun-Jump'n'Run im Browser, im Stil von Hypersense: polierte 3D-Sprites aus dem lokalen ComfyUI,
 Orbitron-HUD, viel Leuchten, Funken, Rauch und Explosionen. Ein **muskulöser Astronaut** im orange-weißen
-Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch fünf Level: von der Absturzstelle
-über das Mutterschiff und die Wüste bis in den Sumpf, in dem die Wurzeln der Brut sitzen.
+Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch sechs Level: von der Absturzstelle
+über das Mutterschiff, die Wüste und den Sumpf bis in die Festung der Invasoren.
 
 | Level | Schauplatz | Boss |
 |---|---|---|
@@ -12,6 +12,7 @@ Raumanzug ist auf einem Alien-Planeten abgestürzt und schießt sich durch fünf
 | 3 **MOTHERSHIP** | im Inneren des Mutterschiffs, Lasertore und Aufzugsschächte | **Spaceboss in der Endform** |
 | 4 **THE OUTBACKS** | rote Wüste mit Treibsand, Wrackfeldern und Sandsturm, zwei Sonnen am Horizont | **The Devourer**, ein Sandleviathan (eine gepanzerte Riesenechse) |
 | 5 **THE SWAMP** | Sumpf mit watbaren Tümpeln, Totholz, Giftschlamm und Sporennebel | **The Rotmother** mit zwei Tentakeln |
+| 6 **ALIEN BASE** | die Festung der Invasoren: Förderhallen, Energiegruben, Wachturm, Kaserne mit Lasertoren | **The Warlord** mit Plasmalanze und Energieschwert |
 
 Punkte, Leben, Waffen und Granaten wandern von Level zu Level mit.
 
@@ -105,6 +106,8 @@ Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz dr
 - **Checkpoints:** Baken, die beim Vorbeilaufen grün werden, heilen etwas und sind der Wiedereinstieg.
 - **Fässer** explodieren in Ketten und reißen Gegner (und den Helden) mit, **Kisten** geben Beute.
 - **Sprungfelder** schießen den Helden hoch, **Säure** tut weh und schleudert ihn wieder heraus.
+- **Förderbänder:** In der Alien Base laufen Bänder (`{` nach links, `}` nach rechts). Wer darauf steht, wird
+  mitgenommen – gegen die Laufrichtung kommt man nur langsam voran, mit ihr fliegt man förmlich.
 - **Waten:** Im Sumpf stehen Tümpel. Im Wasser läuft der Held nur noch mit 60 % Tempo, springt niedriger,
   fällt langsamer und kann nicht dashen. Das Wasser wird über ihm gezeichnet, er steckt also wirklich drin.
 
@@ -148,6 +151,9 @@ Die Fundorte stehen nicht in den ASCII-Karten, sondern als Spaltenliste in `LEVE
 | Stechfliege | schwirrt über dem Helden und sticht im Sturzflug zu |
 | Sporenpilz | bläst Sporenwolken aus, die auf den Helden zutreiben und langsam vergiften |
 | Schlammkoloss | stapft auf zwei Beinen heran, sein Panzerrücken hält Schüsse von vorn ab; wenn er brüllt, ist er offen und stürmt los |
+| Alien-Soldat | läuft auf echten Beinen, hält Abstand und feuert Dreier-Salven aus dem Plasmagewehr |
+| Schwebemine | treibt auf den Helden zu, blinkt scharf und explodiert; zerschossen reißt sie andere Gegner mit |
+| Warper | verschwindet in einem violetten Blitz, taucht hinter dem Helden auf, holt kurz aus und schlitzt nach vorn |
 
 Alle Bosse haben drei Phasen und einen Kern beziehungsweise Schlund, der deutlich mehr Schaden nimmt:
 
@@ -156,6 +162,7 @@ Alle Bosse haben drei Phasen und einen Kern beziehungsweise Schlund, der deutlic
 | **Spaceboss** | Fächer aus der Armkanone, Augen-Salven, Bodenschockwellen (drüberspringen), Orbitalschläge mit Vorwarnung, Drohnen-Nachschub, Ringsalven |
 | **Hive Queen** | Säureregen über die ganze Arena, Fächer, frisch gelegte Krabbler, Fledermausschwärme, Schockwellen, Ringsalven |
 | **Endform** | alles davon, schneller, dazu ein waagrechter Laser: tief heißt drüberspringen, hoch heißt ducken (die Warnung sagt an, was) |
+| **The Warlord** | Plasmalanze (Salven, Fächer), Energieklingen im Bumerangbogen – tief heißt drüberspringen, hoch heißt ducken –, Stampfer mit Schockwellen, Orbitalschläge, Schwebeminen als Nachschub, waagrechter Strahl und Ringsalven aus dem Energieherz |
 | **The Rotmother** | sitzt im Tümpel und schlägt mit zwei Tentakeln zu: einer hebt sich hoch und knallt herunter (Schockwellen nach beiden Seiten), einer fegt flach über den Boden (drüberspringen). Dazu speit sie Säure im Bogen, bläst Sporenwolken, ruft Brut und taucht ab, um woanders wieder aufzutauchen. Ihr Eiersack ist die Schwachstelle |
 | **The Devourer** | wandert als Hügel unter dem Sand heran, bricht mit Vorwarnung heraus und fliegt im Bogen über die Arena. Dabei speit er Feuerbrocken, lässt Sandfontänen aufsteigen, spuckt Sandwürmer aus und feuert Ringsalven. Sein Panzer schluckt 55 % des Schadens, voll trifft nur der glühende Schlund (dann 2,4-facher Schaden) |
 
@@ -170,6 +177,7 @@ beim Feuern zurück und brechen im Tod in die Knie.
 |---|---|---|
 | **Spaceboss** (auch die Endform) | `boss_torso`, `boss_cannon`, `boss_claw`, `boss_leg` | der Kanonenarm zielt auf den Helden, die Mündung sitzt am Ende des Laufs; der Klauenarm holt aus und drischt beim Schlag zu |
 | **Hive Queen** | `queen_torso`, `queen_scythe`, `queen_leg`, `queen_tail` | zwei Sichelklauen (eine hinter, eine vor dem Körper), die Säure kommt aus dem Maul, der Schwanz schwingt gegen die Laufrichtung aus |
+| **The Warlord** | `war_torso`, `war_cannon`, `war_blade`, `war_leg` | Skelett wie beim Spaceboss: Zwei-Knochen-IK für die Beine, die Lanze zielt, das Schwert holt beim Klingenwurf aus und schlägt durch |
 | **The Rotmother** | `mom_body`, `mom_seg`, `mom_tip` | die Tentakel sind Seile: neun Glieder, die mit FABRIK (zwei Durchläufe) zwischen Schulter und Zielpunkt eingepasst werden. Bewegt wird nur der Zielpunkt, der Rest ergibt sich |
 | **The Devourer** | `dev_maw`, `dev_seg`, `dev_arm`, `dev_tail` | kein Skelett, sondern eine Kette: der gehörnte Echsenschädel fliegt eine Bahn, vierzehn Schuppenstücke werden zwischen den Punkten dieser Bahn aufgespannt und nach hinten immer schmaler, am Ende sitzt die Schwanzspitze. Getroffen wird er über Kreise statt über ein Rechteck |
 

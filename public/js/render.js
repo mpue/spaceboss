@@ -28,6 +28,13 @@
       arm2: { a: { x: 0.08, y: 0.50 }, b: { x: 0.97, y: 0.50 } },
       arm2Front: true,
     },
+    war: {
+      torso: { hip: { x: 0.62, y: 0.86 } },
+      leg: { hip: { x: 0.50, y: 0.05 }, knee: { x: 0.60, y: 0.43 }, ankle: { x: 0.35, y: 0.82 }, cut: 0.46 },
+      arm: { a: { x: 0.10, y: 0.55 }, b: { x: 1.0, y: 0.47 } },
+      arm2: { a: { x: 0.09, y: 0.58 }, b: { x: 0.98, y: 0.50 } },
+      arm2Front: true,
+    },
     rot: {
       body: { mid: { x: 0.5, y: 0.5 } },
       seg: { a: { x: 0.5, y: 0.08 }, b: { x: 0.5, y: 0.92 } },
@@ -53,6 +60,10 @@
     mortar: {
       torso: { hip: { x: 0.50, y: 0.88 } },
       leg: { hip: { x: 0.45, y: 0.07 }, knee: { x: 0.72, y: 0.49 }, ankle: { x: 0.36, y: 0.83 }, cut: 0.49 },
+    },
+    trooper: {
+      torso: { hip: { x: 0.76, y: 0.96 } },
+      leg: { hip: { x: 0.50, y: 0.03 }, knee: { x: 0.55, y: 0.48 }, ankle: { x: 0.45, y: 0.88 }, cut: 0.48 },
     },
     mudhulk: {
       torso: { hip: { x: 0.62, y: 0.64 } },
@@ -469,6 +480,8 @@
               c.globalAlpha = 1;
               c.globalCompositeOperation = 'source-over';
             } else c.fillRect(px, py, T, T);
+          } else if (t === 8 || t === 9) {
+            this.drawBelt(g, px, py, t === 8 ? -1 : 1, L, tx, ty);
           } else if (t === 7) {
             // Wasser kommt erst nach den Figuren, hier nur der dunkle Grund
             c.fillStyle = 'rgba(8,24,18,0.55)';
@@ -483,6 +496,39 @@
             c.globalCompositeOperation = 'source-over';
           }
         }
+      }
+    }
+
+    // Förderband: dunkles Band mit wandernden Pfeilen, an den Enden Walzen
+    drawBelt(g, px, py, dir, L, tx, ty) {
+      const c = this.c, T = L.T, col = L.theme.belt || '#4affe0';
+      const im = this.img[L.theme.metal];
+      if (im) { const s = im.width / 8; c.drawImage(im, (tx % 8) * s, (ty % 8) * s, s, s, px, py, T + 0.5, T + 0.5); }
+      c.fillStyle = 'rgba(4,6,12,0.55)'; c.fillRect(px, py, T + 0.5, T + 0.5);
+      c.fillStyle = '#14181f'; c.fillRect(px, py, T + 0.5, 18);
+      c.fillStyle = '#3a4250'; c.fillRect(px, py, T + 0.5, 3);
+      // Pfeile laufen in Bandrichtung
+      const off = ((g.time * 240 * dir) % 32 + 32) % 32;
+      c.save();
+      c.beginPath(); c.rect(px, py + 3, T, 14); c.clip();
+      c.globalCompositeOperation = 'lighter';
+      c.strokeStyle = col; c.lineWidth = 3; c.globalAlpha = 0.75;
+      for (let x = px - 32 + off; x < px + T + 32; x += 32) {
+        c.beginPath();
+        c.moveTo(x - 5 * dir, py + 5); c.lineTo(x + 5 * dir, py + 10); c.lineTo(x - 5 * dir, py + 15);
+        c.stroke();
+      }
+      c.restore();
+      c.globalAlpha = 1;
+      // Walzen am Anfang und Ende eines Bandes
+      const lf = L.tiles[ty * L.w + tx - 1], rt = L.tiles[ty * L.w + tx + 1];
+      for (const [end, x] of [[lf !== 8 && lf !== 9, px + 6], [rt !== 8 && rt !== 9, px + T - 6]]) {
+        if (!end) continue;
+        c.fillStyle = '#2a303a'; c.beginPath(); c.arc(x, py + 10, 9, 0, TAU); c.fill();
+        c.strokeStyle = col; c.lineWidth = 2; c.globalAlpha = 0.8;
+        const a = g.time * 12 * dir;
+        c.beginPath(); c.moveTo(x, py + 10); c.lineTo(x + Math.cos(a) * 8, py + 10 + Math.sin(a) * 8); c.stroke();
+        c.globalAlpha = 1;
       }
     }
 
@@ -1006,6 +1052,39 @@
           this.hpBar(e, e.y - e.h * 0.7);
           break;
         }
+        case 'trooper': {
+          if (!this.drawWalker(g, e)) this.spr('trooper_body', e.x, e.y, e.h, { flip: e.face > 0, flash: fl });
+          // Mündungslicht beim Feuern, Visier glimmt
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glowOf('#4affe0'), e.x + e.face * 17, e.y - 115, 50, 0.5 + 0.3 * Math.sin(e.t * 6));
+          if (e.kick > 0) this.gl(this.glowOf('#4affe0'), e.x + e.face * 125, e.y - 72, 110 * e.kick, 0.9);
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          break;
+        }
+        case 'hmine': {
+          const armed = e.armT > 0, blink = armed ? (Math.sin(g.time * 50) > 0 ? 1 : 0.3) : 0.5 + 0.3 * Math.sin(e.t * 5);
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glows.red, e.x, e.y, (armed ? 200 : 110), blink * (armed ? 1 : 0.6));
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          this.spr('hmine', e.x, e.y, e.h * 1.25, { rot: e.t * (armed ? 9 : 0.8), flash: Math.max(fl, armed ? 0.5 * blink : 0) });
+          break;
+        }
+        case 'warper': {
+          if (e.hidden) break;
+          // Ein- und Ausblenden beim Warp: zusammenziehen und wieder aufziehen
+          let sx = 1, al = 1;
+          if (e.state === 'out') { const k = clamp(e.st / 0.3, 0, 1); sx = 1 - k; al = 1 - k * 0.5; }
+          if (e.state === 'in') { const k = clamp(e.st / 0.25, 0, 1); sx = k; al = 0.5 + k * 0.5; }
+          const lean = e.state === 'windup' ? -0.15 : e.state === 'slash' ? 0.25 : 0;
+          if (e.state === 'slash') for (let i = 1; i <= 3; i++)          // Nachbilder beim Schlitzen
+            this.spr('warper', e.x - e.face * i * 34, e.y, e.h * 1.3, { flip: e.face > 0, alpha: 0.25 / i, rot: lean * e.face });
+          this.spr('warper', e.x, e.y, e.h * 1.3, { flip: e.face > 0, sx: Math.max(0.05, sx), alpha: al,
+            rot: lean * e.face, flash: Math.max(fl, e.state === 'windup' ? 0.4 : 0) });
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glowOf('#ff4fd8'), e.x, e.y - 20, 150, 0.25 + (e.state === 'windup' ? 0.5 : 0));
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+          break;
+        }
         case 'sandworm': {
           if (e.hidden) {            // unter dem Sand: nur ein Hügel und Staub
             const gy = e.y - 110;
@@ -1435,6 +1514,18 @@
       }
       for (const b of g.ebullets) {
         const col = b.color || '#ff4a5a';
+        if (b.kind === 'blade') {            // rotierende Energiesichel
+          c.globalCompositeOperation = 'lighter';
+          this.gl(this.glowOf(col), b.x, b.y, 150, 0.8);
+          c.save(); c.translate(b.x, b.y); c.rotate(b.spin || 0);
+          c.globalAlpha = 1;
+          for (const [w, s] of [[10, col], [4, '#ffffff']]) {
+            c.strokeStyle = s; c.lineWidth = w; c.lineCap = 'round';
+            for (let k = 0; k < 2; k++) { c.beginPath(); c.arc(0, 0, 28, k * Math.PI, k * Math.PI + 2.1); c.stroke(); }
+          }
+          c.restore();
+          continue;
+        }
         if (b.kind === 'thorn') {           // Stachel
           c.globalCompositeOperation = 'source-over';
           c.globalAlpha = 1;

@@ -39,6 +39,18 @@ SPRITES = {
     "bat": ("bat_11", 300, 200),
     "saucer": ("saucer_11", 300, 200),
     "sentinel": ("sentinel_11", 260, 300),
+    # Level 6: Alien Base
+    "trooper_body": ("trooper_body_11", 360, 360),
+    "trooper_leg": ("trooper_leg_11", 200, 400),
+    "hmine": ("hmine_23", 200, 200),
+    "warper": ("warper_23", 300, 300),
+    "citadel": ("citadel_23", 1536, 640),
+    "pylons": ("pylons_11", 1536, 640),
+    # Der Warlord in Einzelteilen
+    "war_torso": ("war_torso_53", 700, 700),
+    "war_cannon": ("war_cannon_11", 900, 450),
+    "war_blade": ("war_blade_37", 900, 450),
+    "war_leg": ("war_leg_23", 380, 760),
     # Extras
     "pu_jet": ("pu_jet_11", 200, 200),
     "pu_shield": ("pu_shield_11", 200, 200),
@@ -86,9 +98,10 @@ SPRITES = {
 ADDITIVE = {"explosion": ("explosion_11", 512), "plasma": ("plasma_11", 512)}
 BACKDROPS = {"sky": ("sky_11", 1920), "title": ("title_23", 1920), "cave_bg": ("cave_bg_11", 1920),
              "ship_bg": ("ship_bg_11", 1920), "desert_bg": ("desert_bg_clean", 1920),
-             "swamp_bg": ("swamp_bg_11", 1920)}
+             "swamp_bg": ("swamp_bg_11", 1920), "base_bg": ("base_bg_11", 1920)}
 TEXTURES = {"ground": "ground_23", "metal": "metal_11", "cave": "cave_11", "hull": "hull_23",
-            "sand": "sand_11", "rust": "rust_23", "mud": "mud_11", "bark": "bark_11"}
+            "sand": "sand_11", "rust": "rust_23", "mud": "mud_11", "bark": "bark_11",
+            "alien_floor": "alien_floor_23", "alien_wall": "alien_wall_11"}
 
 
 def smoothstep(a, b, x):

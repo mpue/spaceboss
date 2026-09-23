@@ -39,6 +39,7 @@
     Y: { key: 'magnet', name: 'MAGNET', time: 20, color: '#ffd24a', img: 'pu_magnet', hint: 'PULLS IN COINS' },
   };
   const EXTRA_KEYS = Object.keys(EXTRAS);
+  const BELT = 240;                       // Tempo der Förderbänder in Pixel pro Sekunde
 
   const EN = {
     crawler: { w: 96, h: 58, hp: 30, score: 100, flesh: true, dmg: 15, coins: 1 },
@@ -59,6 +60,9 @@
     stingfly: { w: 100, h: 90, hp: 20, score: 150, flesh: true, dmg: 12, coins: 1 },
     sporepod: { w: 120, h: 150, hp: 65, score: 250, flesh: true, dmg: 12, coins: 3 },
     mudhulk: { w: 210, h: 160, hp: 240, score: 700, flesh: true, dmg: 25, coins: 7 },
+    trooper: { w: 90, h: 230, hp: 70, score: 350, flesh: true, dmg: 15, coins: 3 },
+    hmine: { w: 80, h: 80, hp: 22, score: 150, dmg: 0, coins: 1 },
+    warper: { w: 90, h: 130, hp: 55, score: 400, flesh: true, dmg: 20, coins: 3 },
     boss: { w: 440, h: 600, hp: 4200, score: 25000, dmg: 30, coins: 60 },
   };
 
@@ -75,6 +79,14 @@
         { rest: -58, phase: 0.50, back: true },
         { rest: 74, phase: 0.50, back: false },
         { rest: -70, phase: 0.00, back: false },
+      ],
+    },
+    trooper: {
+      parts: { torso: 'trooper_body', leg: 'trooper_leg' },
+      torsoH: 150, stand: 110, thigh: 56, shin: 62, step: 96, lift: 24, bob: 5,
+      legs: [
+        { rest: 10, phase: 0.50, back: true },
+        { rest: -6, phase: 0.00, back: false },
       ],
     },
     mudhulk: {
@@ -121,6 +133,20 @@
       mouth: { x: 234, y: -291 },        // aus dem Maul kommt die Säure
       body: { x0: -230, y0: -510, x1: 230, y1: 300 },
     },
+    // Der Warlord: Plasmalanze zielt, das Energieschwert holt aus und wirft Klingen
+    war: {
+      parts: { torso: 'war_torso', arm: 'war_cannon', arm2: 'war_blade', leg: 'war_leg' },
+      aim: 'arm',
+      torsoH: 540, stand: 300,
+      thigh: 165, shin: 175,
+      step: 240, lift: 75,
+      shoulder: { x: -28, y: -259 },     // unter der großen Schulterplatte
+      clawSh: { x: -12, y: -246 },
+      armLen: 450, clawLen: 430,
+      core: { x: 105, y: -268, r: 95 },  // Energieherz in der Brust
+      eye: { x: 56, y: -389 },
+      body: { x0: -200, y0: -470, x1: 170, y1: 300 },
+    },
     // Die Rotmother: fetter Leib mit zwei Tentakeln, die als Seil gerechnet werden
     rot: {
       kind: 'tentacle',
@@ -163,6 +189,9 @@
       armor: 0.45, critMul: 2.4,                       // Panzerung: nur der Schlund nimmt vollen Schaden
       pool: [['spit', 'strikes'], ['brood', 'beam', 'spit'], ['rings', 'beam', 'strikes']],
       intro: 'THE SAND IS MOVING', down: 'THE DEVOURER FALLS' },
+    warlord: { name: 'THE WARLORD', rig: 'war', hp: 7600, score: 150000, color: '#4affe0', minion: 'hmine',
+      pool: [['blades', 'volley', 'slam'], ['strikes', 'blades', 'drones', 'beam'], ['blades', 'rings', 'beam', 'spread']],
+      intro: 'THE WARLORD RISES', down: 'THE WARLORD IS DEFEATED' },
     rotmother: { name: 'THE ROTMOTHER', rig: 'rot', hp: 6400, score: 120000, color: '#c8ff5a', minion: 'stingfly',
       armor: 0.6, critMul: 2.2,
       pool: [['whip', 'spit'], ['sweep', 'spores', 'brood'], ['whip', 'spit', 'sweep', 'spores']],
@@ -595,7 +624,7 @@
       this.tickExtras(p, dt);
 
       const wasGround = p.onGround, vyBefore = p.vy;
-      const r = this.move(p, dt);
+      const r = this.belt(p, dt);
       // Waten: langsamer, träger Sprung, kein Dash, dafür sanfteres Fallen
       const wasWet = p.wet;
       p.wet = r.water;
@@ -899,6 +928,9 @@
         case 'f': this.addEnemy('stingfly', s.x, s.y - 260); break;
         case 'o': this.addEnemy('sporepod', s.x, s.y - 75); break;
         case 'U': this.addEnemy('mudhulk', s.x, s.y - 80); break;
+        case 'a': this.addEnemy('trooper', s.x, s.y - 115); break;
+        case 'e': this.addEnemy('hmine', s.x, s.y - 220); break;
+        case 'q': this.addEnemy('warper', s.x, s.y - 65); break;
         case '$': this.pickups.push({ type: 'coin', x: s.x, y: s.y - T / 2, vx: 0, vy: 0, fixed: true, t: rnd(0, 6) }); break;
         case 'H': case 'G': case 'S': case 'L': case 'R': case 'A': case 'J': case 'Q': case 'O': case 'Y':
           this.pickups.push({ type: s.ch, x: s.x, y: s.y - 40, vx: 0, vy: 0, fixed: true, t: 0 }); break;
@@ -1323,15 +1355,126 @@
           e.walk = (e.walk || 0) + dt * Math.abs(e.vx) / 28;
           break;
         }
+        case 'trooper': {
+          // Alien-Soldat: hält Abstand, bleibt auf seinem Boden und feuert Dreier-Salven
+          e.vy = Math.min(1600, e.vy + P.grav * dt);
+          if (e.onGround) {
+            e.face = dx > 0 ? 1 : -1;
+            const want = p.x - e.face * 520;
+            e.vx = alive && dist < 1300 ? clamp((want - e.x) * 1.4, -150, 150) : 0;
+            if (e.burst > 0) e.vx = 0;                        // steht still beim Feuern
+            if (!this.groundAhead(e, Math.sign(e.vx) || 1)) e.vx = 0;
+          }
+          const r = this.belt(e, dt);
+          e.onGround = r.ground;
+          if (r.ground) e.vy = 0;
+          if (alive && dist < 1150 && Math.abs(dy) < 400 && (e.cd -= dt * cool) <= 0) { e.cd = rnd(1.8, 2.5); e.burst = 3; e.bt = 0.25; }
+          if (e.burst > 0 && (e.bt -= dt) <= 0) {
+            e.burst--; e.bt = 0.13;
+            const mx = e.x + e.face * 125, my = e.y - 72;     // Mündung des Plasmagewehrs
+            this.enemyShoot(mx, my, Math.atan2(p.y - 20 - my, p.x - mx) + rnd(-0.05, 0.05), 760, 'orb', '#4affe0');
+            this.part({ x: mx, y: my, life: 0.07, size: 90, color: '#4affe0', kind: 'flash' });
+            e.kick = 1;
+          }
+          e.kick = Math.max(0, (e.kick || 0) - dt * 8);
+          break;
+        }
+        case 'hmine': {
+          // Schwebemine: treibt heran, blinkt scharf und geht in die Luft
+          const hover = e.home.y + Math.sin(e.t * 2) * 12;
+          if (e.armT > 0) {
+            e.armT -= dt;
+            e.vx *= Math.pow(0.02, dt); e.vy *= Math.pow(0.02, dt);
+            if (e.armT <= 0) { this.mineBlast(e); break; }
+          } else if (alive && dist < 720) {
+            const sp = 230 + (720 - dist) * 0.35;
+            e.vx += (dx / dist * sp - e.vx) * 2.5 * dt;
+            e.vy += ((p.y - 30 - e.y) / Math.max(1, dist) * sp - e.vy) * 2.5 * dt;
+            if (dist < 130) { e.armT = 0.45; this.audio.charge(0.45); }
+          } else {
+            e.vx *= Math.pow(0.1, dt);
+            e.vy = (hover - e.y) * 2;
+          }
+          e.x += e.vx * dt; e.y += e.vy * dt;
+          break;
+        }
+        case 'warper': {
+          // Warper: verschwindet, taucht hinter dem Helden wieder auf und schlitzt
+          e.vy = Math.min(1600, e.vy + P.grav * dt);
+          e.st = (e.st || 0) + dt;
+          if (e.state === 'idle') { e.state = 'wait'; e.st = rnd(0, 0.6); }
+          if (e.state === 'wait') {
+            e.face = dx > 0 ? 1 : -1;
+            e.vx = 0;
+            if (alive && dist < 900 && e.st > 1.4) { e.state = 'out'; e.st = 0; this.warpFx(e); }
+          } else if (e.state === 'out') {
+            if (e.st > 0.3) {
+              // hinter den Helden, sonst vor ihn – aber nur auf festen Boden, nicht in eine Grube
+              const back = p.face > 0 ? -1 : 1, fy = p.y + p.h / 2;
+              const ok = x => !this.solidAt(x, p.y) && this.solidAt(x, fy + 20) && this.solidAt(x + 40, fy + 20) && this.solidAt(x - 40, fy + 20);
+              const nx = [p.x + back * 190, p.x - back * 190].find(ok);
+              if (nx === undefined || !p.onGround) { e.state = 'wait'; e.st = 0.8; }
+              else {
+                e.hidden = true;
+                e.x = nx; e.y = fy - e.h / 2 - 2; e.vy = 0;
+                e.state = 'in'; e.st = 0;
+              }
+            }
+          } else if (e.state === 'in') {
+            if (e.st > 0.25) { e.hidden = false; e.state = 'windup'; e.st = 0; this.warpFx(e); e.face = dx > 0 ? 1 : -1; }
+          } else if (e.state === 'windup') {
+            if (e.st > 0.38) { e.state = 'slash'; e.st = 0; e.vx = e.face * 950; this.audio.dash(); }
+          } else if (e.state === 'slash') {
+            if (Math.random() < 0.8) this.part({ x: e.x - e.face * 30, y: e.y + rnd(-40, 40), vx: -e.face * 200, vy: 0,
+              life: 0.25, size: rnd(2, 4), color: '#ff4fd8', kind: 'spark' });
+            if (e.st > 0.24 || !this.groundAhead(e, e.face)) { e.state = 'recover'; e.st = 0; e.vx = 0; }
+          } else if (e.state === 'recover') {
+            if (e.st > 0.9) { e.state = 'wait'; e.st = 0; }
+          }
+          if (!e.hidden) {
+            const r = this.move(e, dt);
+            if (r.ground) e.vy = 0;
+            if (r.wall && e.state === 'slash') { e.state = 'recover'; e.st = 0; e.vx = 0; }
+          }
+          break;
+        }
         case 'boss': this.updateBoss(e, dt); break;
       }
       if (WALKERS[e.type] && !e.dead) this.walkerGait(e, dt);
       // Berührung
-      if (alive && !e.intro && e.type !== 'boss' && p.inv <= 0) {
+      if (alive && !e.intro && !e.hidden && e.type !== 'boss' && EN[e.type].dmg > 0 && p.inv <= 0) {
         const hb = this.hitbox(e), m = 10;
         if (p.x + p.w / 2 > hb.x0 + m && p.x - p.w / 2 < hb.x1 - m && p.y + p.h / 2 > hb.y0 + m && p.y - p.h / 2 < hb.y1 - m)
           this.hurtPlayer(EN[e.type].dmg, Math.sign(p.x - e.x) || 1);
       }
+    }
+
+    // Bewegen mit Förderband: steht der Akteur auf einem Band, nimmt es ihn mit
+    belt(a, dt) {
+      const T = this.L.T, t = this.tileAt(Math.floor(a.x / T), Math.floor((a.y + a.h / 2 + 2) / T));
+      const push = a.onGround ? (t === 8 ? -BELT : t === 9 ? BELT : 0) : 0;
+      a.vx += push;
+      const r = this.move(a, dt);
+      a.vx -= push;
+      return r;
+    }
+
+    // Schwebemine: Druckwelle trifft den Helden und reißt andere Gegner mit
+    mineBlast(e) {
+      if (e.blown) return;
+      e.blown = true;
+      this.explode(e.x, e.y, 170, 45, { fx: 1.6, noPlayer: true, color: '#ff4a4a' });
+      const p = this.player;
+      if (!p.dead && Math.hypot(p.x - e.x, p.y - e.y) < 160) this.hurtPlayer(28, Math.sign(p.x - e.x) || 1);
+      if (!e.dead) { e.hp = 0; this.killEnemy(e); }
+    }
+
+    // Warp: violetter Blitz, Ring und Funken
+    warpFx(e) {
+      this.ring(e.x, e.y, 140, '#ff4fd8');
+      this.part({ x: e.x, y: e.y, life: 0.15, size: 200, color: '#ff4fd8', kind: 'flash' });
+      this.burst(e.x, e.y, 18, { color: '#ff4fd8', speed: 500, life: 0.35, size: 3 });
+      this.audio.gate();
     }
 
     enemyShoot(x, y, a, speed, kind = 'orb', color) {
@@ -1430,6 +1573,7 @@
       const d = EN[e.type];
       if (e.type === 'boss') { this.bossDeath(e); return; }
       e.dead = true;
+      if (e.type === 'hmine' && !e.blown) this.pending.push({ t: 0.01, fn: () => this.mineBlast(e) });
       this.kills++;
       this.combo++; this.comboT = 2.5;
       this.bestCombo = Math.max(this.bestCombo, this.combo);
@@ -1586,6 +1730,7 @@
       let clawT = 0.75 + Math.sin(this.time * 1.3 + 1) * 0.12;
       if (e.atk === 'slam') clawT = e.atkT < 0.9 ? -1.25 : 1.35;
       else if (e.atk === 'brood') clawT = 1.2;
+      else if (e.atk === 'blades') clawT = e.atkT > 0.3 && (e.atkT - 0.3) % 0.7 > 0.42 ? 1.0 : -1.15;
       else if (e.rear > 0.2) clawT = -0.6;
       r.claw = lerp(r.claw, clawT, 1 - Math.pow(e.atk === 'slam' && e.atkT >= 0.9 ? 1e-9 : 0.004, dt));
       // Schwanz schwingt gegen die Laufrichtung aus
@@ -1722,6 +1867,21 @@
           }
           if (t > 1.5) this.endAttack(e, 0.8);
           break;
+        case 'blades': {
+          // Energieklingen im Bumerangbogen: tief = drüberspringen, hoch = ducken
+          if (t > 0.72 + e.n * 0.7 * speedUp && e.n < 2 + phase) {
+            e.n++;
+            const R = e.R, r = e.rig, bx = r.hipX - R.clawSh.x - Math.cos(r.claw) * R.clawLen * 0.8;
+            const low = e.n % 2 === 1, by = low ? fy - 36 : fy - 150;
+            this.ebullets.push({ kind: 'blade', x: bx, y: by, vx: -1050 - phase * 60, vy: 0, ax: 900, home: e.x - 80,
+              r: 30, dmg: 20, life: 4, t: 0, color: col, low });
+            this.audio.dash();
+            this.part({ x: bx, y: by, life: 0.12, size: 170, color: col, kind: 'flash' });
+            this.shake = Math.max(this.shake, 0.25);
+          }
+          if (t > 1.4 + (2 + phase) * 0.7 * speedUp) this.endAttack(e, 1.1 * speedUp);
+          break;
+        }
         case 'rings':
           if (t > 0.8 + e.n * 0.45 && e.n < 4) {
             e.n++;
@@ -2329,6 +2489,13 @@
       for (const b of this.ebullets) {
         b.life -= dt; b.t += dt;
         if (b.g) b.vy += b.g * dt;
+        if (b.ax) b.vx += b.ax * dt;
+        if (b.kind === 'blade') {                  // zurück beim Warlord: verschwindet
+          if (b.vx > 0 && b.x > b.home) { b.life = 0; continue; }
+          b.spin = (b.spin || 0) + dt * 22;
+          if (Math.random() < 0.6) this.part({ x: b.x, y: b.y, vx: rnd(-60, 60), vy: rnd(-60, 60), life: 0.25, size: 3,
+            color: b.color, kind: 'spark' });
+        }
         b.x += b.vx * dt; b.y += b.vy * dt;
         const hitP = !p.dead && inBox(b.x, b.y, { x0: p.x - p.w / 2, y0: p.y - p.h / 2, x1: p.x + p.w / 2, y1: p.y + p.h / 2 }, b.r - 4);
         if (b.kind === 'bomb' && (hitP || this.solidAt(b.x, b.y) || b.life <= 0)) {
@@ -2338,7 +2505,7 @@
           if (!p.dead && Math.hypot(p.x - b.x, p.y - b.y) < 130) this.hurtPlayer(b.dmg, Math.sign(p.x - b.x) || 1);
           continue;
         }
-        if (this.solidAt(b.x, b.y)) {
+        if (b.kind !== 'blade' && this.solidAt(b.x, b.y)) {
           b.life = 0;
           if (b.kind === 'acid') {
             for (let i = 0; i < 8; i++) this.part({ x: b.x, y: b.y - 6, vx: rnd(-200, 200), vy: rnd(-300, -50), g: 1500,
@@ -2348,7 +2515,7 @@
           continue;
         }
         if (!p.dead && inBox(b.x, b.y, { x0: p.x - p.w / 2, y0: p.y - p.h / 2, x1: p.x + p.w / 2, y1: p.y + p.h / 2 }, b.r - 4)) {
-          if (p.inv <= 0) { this.hurtPlayer(b.dmg, Math.sign(b.vx) || 1); b.life = 0; }
+          if (p.inv <= 0) { this.hurtPlayer(b.dmg, Math.sign(b.vx) || 1); if (b.kind !== 'blade') b.life = 0; }
         }
       }
       this.ebullets = this.ebullets.filter(b => b.life > 0 && Math.abs(b.x - this.cam.x - W / 2) < W && b.y < this.L.ph + 100 && b.y > -300);

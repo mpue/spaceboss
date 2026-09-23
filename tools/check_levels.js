@@ -11,7 +11,7 @@ L.LEVELS.forEach((def, i) => {
   const floor = t => L.SOLID[t] || t === 3;
   for (const s of lv.spawns) {
     const tx = Math.floor(s.x / T), ty = Math.round(s.y / T) - 1;
-    if ('tspXnB'.includes(s.ch) && !floor(at(tx, ty + 1))) { console.log(`L${i + 1} '${s.ch}' bei Spalte ${tx}, Zeile ${ty} schwebt`); bad++; }
+    if ('tspXnBaq'.includes(s.ch) && !floor(at(tx, ty + 1))) { console.log(`L${i + 1} '${s.ch}' bei Spalte ${tx}, Zeile ${ty} schwebt`); bad++; }
     if (s.ch === 'T' && !L.SOLID[at(tx, ty - 1)]) { console.log(`L${i + 1} Deckenturm ohne Decke bei ${tx}`); bad++; }
     if (s.ch === '|') {
       let up = ty; while (up > 0 && !L.SOLID[at(tx, up - 1)]) up--;

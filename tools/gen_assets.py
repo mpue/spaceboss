@@ -21,7 +21,10 @@ EXTRA_SEEDS = {"hero_torso": [11, 23, 37, 41], "hero_arm": [11, 23, 37, 41], "he
                "dev_maw": [11, 23, 37], "dev_seg": [11, 23, 37], "dev_arm": [11, 23, 37], "dev_tail": [11, 23],
                "mom_body": [11, 23, 37], "mom_seg": [11, 23], "mom_tip": [11, 23],
                "mortar_body": [11, 23, 37], "mortar_leg": [11, 23, 37],
-               "mudhulk_body": [11, 23, 37], "mudhulk_leg": [11, 23, 37]}
+               "mudhulk_body": [11, 23, 37], "mudhulk_leg": [11, 23, 37],
+               "trooper_body": [11, 23, 37], "trooper_leg": [11, 23, 37],
+               "war_torso": [11, 23, 37], "war_cannon": [11, 23, 37], "war_blade": [11, 23, 37],
+               "war_leg": [11, 23, 37]}
 
 GREEN = ("highly detailed sci-fi video game sprite, polished 3D render, sharp clean silhouette, centered, "
          "the whole object fully visible with margin around it, isolated on a flat uniform pure bright green "
@@ -220,6 +223,48 @@ ASSETS = {
               "side view, wide panoramic", GREEN, 1536, 640),
     "reeds": ("a row of tall alien swamp reeds, dead grass tufts, bare roots and rotten stumps, exact side view, "
               "wide panoramic", GREEN, 1536, 640),
+    # Level 6: Alien Base – die Festung der Invasoren, schwarzes Chitin und Metall mit türkisen Adern
+    "base_bg": ("a colossal biomechanical alien fortress city at night on an alien world, towering black chitin "
+                "and metal spires with glowing teal energy veins, huge beams of cyan light shooting into a magenta "
+                "nebula sky, a giant cracked moon, floating alien ships, cinematic, wide angle",
+                "no text, no frame, no people", 1536, 864),
+    "alien_floor": ("alien fortress floor texture, black biomechanical metal plates fused with ribbed chitin, thin "
+                    "glowing teal energy lines in the seams, " + TILE, "", 1024, 1024),
+    "alien_wall": ("alien fortress wall texture, dark purple and black biomechanical armor panels with organic ribs, "
+                   "tubes and small glowing teal lights, " + TILE, "", 1024, 1024),
+    "citadel": ("a row of towering black biomechanical alien fortress spires and domes with glowing teal windows and "
+                "energy conduits, silhouette skyline, exact side view, wide panoramic", GREEN, 1536, 640),
+    "pylons": ("a row of alien energy pylons, bone-like black metal arches, cables and glowing teal crystal "
+               "emitters, exact side view, wide panoramic", GREEN, 1536, 640),
+    # neue Gegner: der Soldat läuft auf echten Beinen, darum Rumpf und Bein getrennt
+    "trooper_body": ("the upper body of a tall slender alien soldier without any legs, black and teal chitin armor, "
+                     "elongated head with a glowing cyan visor slit, holding a long alien plasma rifle with both "
+                     "hands pointing to the left, the body ends at the hips, amputated, legless, no legs, "
+                     "facing to the left, exact side view profile", GREEN, 1024, 1024),
+    "trooper_leg": ("a single long slender alien soldier leg with a reverse digitigrade knee, black and teal chitin "
+                    "armor plates, from the hip joint down to a narrow two toed clawed foot, standing straight and "
+                    "vertical, exact side view, foot pointing to the right, nothing else", GREEN, 768, 1536),
+    "hmine": ("a floating alien hover mine, a black spiked metal sphere with a pulsing red glowing core visible "
+              "through slits, small antigravity fins, collectible video game enemy, front view", GREEN, 1024, 1024),
+    "warper": ("a lean alien assassin creature crouching, glossy black skin with glowing magenta cracks, long "
+               "blade arms, eyeless head with a glowing magenta crest, surrounded by a faint teleport shimmer, "
+               "facing to the left, exact side view profile", GREEN, 1024, 1024),
+    # Der Endgegner von Level 6 in Einzelteilen: der Warlord in seiner Kampfrüstung
+    "war_torso": ("the severed upper half of a colossal alien warlord floating alone in empty space, ornate crimson "
+                  "and gold battle armor, a glowing cyan energy heart in the chest, a crowned alien head with a "
+                  "glowing cyan visor and swept back horns, huge round shoulder pauldrons, a short tattered black "
+                  "cape, cut off at the waist, amputated, legless, armless, no legs, no feet, no arms, nothing below "
+                  "the belt, exact side view profile facing to the right", GREEN, 1024, 1024),
+    "war_cannon": ("a gigantic armored alien arm in ornate crimson and gold armor fused with a long plasma lance "
+                   "cannon with glowing cyan energy rings, from the round shoulder joint to the muzzle, arm "
+                   "stretched straight out horizontally, cannon pointing to the right, exact side view",
+                   GREEN, 1536, 768),
+    "war_blade": ("a gigantic armored alien arm in ornate crimson and gold armor ending in a huge curved glowing "
+                  "cyan energy sword blade, from the round shoulder joint to the blade tip, arm stretched straight "
+                  "out horizontally, blade pointing to the right, exact side view", GREEN, 1536, 768),
+    "war_leg": ("a single gigantic armored alien warlord leg in ornate crimson and gold armor with a reverse "
+                "digitigrade knee, from the hip joint to a heavy three toed armored foot, standing straight and "
+                "vertical, exact side view, foot pointing to the right, nothing else", GREEN, 768, 1536),
     # Level 2: Hive Caverns
     "spitter": ("a squat biomechanical alien spitter creature with a swollen glowing acid sac on its back, dark purple "
                 "armored hide, wide open fanged mouth and glowing green eyes, crouching on short legs, facing to the "
