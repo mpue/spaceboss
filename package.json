@@ -6,10 +6,12 @@
   "description": "Run-and-Gun Jump'n'Run im Browser: ein muskulöser Astronaut gegen eine Alien-Invasion",
   "author": "mpue",
   "main": "electron/main.js",
+  "desktopName": "spaceboss.desktop",
   "scripts": {
     "start": "node server.js",
     "app": "electron .",
     "dist": "electron-builder --win nsis portable",
+    "dist:linux": "node tools/dist_linux.js",
     "dist:dir": "electron-builder --dir"
   },
   "engines": {
@@ -53,8 +55,16 @@
       "category": "public.app-category.games"
     },
     "linux": {
-      "target": "AppImage",
-      "category": "Game"
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Game",
+      "syncDesktopName": true,
+      "artifactName": "Spaceboss-${version}-linux.${ext}"
+    },
+    "appImage": {
+      "artifactName": "Spaceboss-${version}.${ext}"
     }
   },
   "devDependencies": {
