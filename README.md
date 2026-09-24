@@ -98,7 +98,7 @@ npm 11 führt Installationsskripte nur nach Freigabe aus. Fehlt nach `npm instal
 
 ## Webseite
 
-Unter <https://pueski.de/spaceboss/> liegt eine Seite zum Spiel mit den Windows-Downloads; das
+Unter <https://pueski.de/spaceboss/> liegt eine Seite zum Spiel mit den Downloads für Windows und Linux; das
 Browser-Spiel selbst läuft darunter unter <https://pueski.de/spaceboss/play/>. Die Seite liegt in `site/`
 (statisch, ohne Abhängigkeiten, Schrift selbst gehostet), Caddy liefert sie aus `/var/www/spaceboss-web` aus.
 
@@ -106,11 +106,13 @@ Browser-Spiel selbst läuft darunter unter <https://pueski.de/spaceboss/play/>. 
 npx electron tools/screenshots.js   # echte Spielszenen: der Autopilot spielt, Electron fotografiert unsichtbar
 python tools/site_images.py         # Szenen zuschneiden, Titelbild, Vorschaubild, Favicons -> site/img/
 npm run dist                        # Windows-Installer und portable .exe -> dist/
-tools/deploy_site.sh                # Seite und .exe auf den Server (die .exe nur, wenn sie sich geändert haben)
+npm run dist:linux                  # AppImage und .tar.gz -> dist/
+tools/deploy_site.sh                # Seite und Downloads auf den Server (nur die, die sich geändert haben)
 ```
 
 Version, Dateigrößen und SHA-256-Prüfsummen stehen fest in `site/index.html` und müssen bei einer neuen
-Version dort mitgezogen werden.
+Version oder einem neuen Build dort mitgezogen werden. `tools/deploy_site.sh` prüft das vor dem Hochladen und
+bricht mit der passenden Prüfsumme ab, wenn eine Datei in `dist/` nicht zur Seite passt.
 
 ## Steuerung
 
