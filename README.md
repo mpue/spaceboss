@@ -78,6 +78,22 @@ gibt eine Prüfzeile aus und beendet sich wieder – praktisch, um einen Build z
 npm 11 führt Installationsskripte nur nach Freigabe aus. Fehlt nach `npm install` die Electron-Laufzeit
 (`node_modules/electron/dist`), holt `node node_modules/electron/install.js` sie nach.
 
+## Webseite
+
+Unter <https://pueski.de/spaceboss/> liegt eine Seite zum Spiel mit den Windows-Downloads; das
+Browser-Spiel selbst läuft darunter unter <https://pueski.de/spaceboss/play/>. Die Seite liegt in `site/`
+(statisch, ohne Abhängigkeiten, Schrift selbst gehostet), Caddy liefert sie aus `/var/www/spaceboss-web` aus.
+
+```bash
+npx electron tools/screenshots.js   # echte Spielszenen: der Autopilot spielt, Electron fotografiert unsichtbar
+python tools/site_images.py         # Szenen zuschneiden, Titelbild, Vorschaubild, Favicons -> site/img/
+npm run dist                        # Windows-Installer und portable .exe -> dist/
+tools/deploy_site.sh                # Seite und .exe auf den Server (die .exe nur, wenn sie sich geändert haben)
+```
+
+Version, Dateigrößen und SHA-256-Prüfsummen stehen fest in `site/index.html` und müssen bei einer neuen
+Version dort mitgezogen werden.
+
 ## Steuerung
 
 | Tastatur + Maus | Gamepad | |

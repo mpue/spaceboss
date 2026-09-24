@@ -331,7 +331,8 @@
     const marks = L.spawns.filter(s => s.ch === 'X').map(s => s.col);
     const r = Math.random();
     let at = 0;                                          // Anfang
-    if (r < 0.35 && L.arena) at = L.arena.x / T - 8;     // Bosskampf
+    if (params.get('demo') === '1' && params.get('at')) at = Number(params.get('at'));   // feste Stelle zum Testen
+    else if (r < 0.35 && L.arena) at = L.arena.x / T - 8;     // Bosskampf
     else if (r < 0.75 && marks.length) at = marks[Math.floor(Math.random() * marks.length)];
     startGame(demoLevel, null, at);
     demo = { pilot: new Autopilot(), t: 0, at };

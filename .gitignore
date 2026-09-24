@@ -8,3 +8,5 @@ art/
 
 # Desktop-App: Build-Ausgabe von electron-builder
 dist/
+# Rohaufnahmen für die Webseite (tools/screenshots.js), auf der Seite liegen die zugeschnittenen in site/img
+site/shots/
