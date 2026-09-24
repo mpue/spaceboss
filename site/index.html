@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Spaceboss – Run &amp; Gun für Windows und Browser</title>
-  <meta name="description" content="Ein muskulöser Astronaut, sechs Level, sechs riesige Bosse und sehr viel Ballerei. Spaceboss gratis für Windows laden oder direkt im Browser spielen.">
+  <title>Spaceboss – Run &amp; Gun für Windows, Linux und Browser</title>
+  <meta name="description" content="Ein muskulöser Astronaut, sechs Level, sechs riesige Bosse und sehr viel Ballerei. Spaceboss gratis für Windows und Linux laden oder direkt im Browser spielen.">
   <link rel="canonical" href="https://pueski.de/spaceboss/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Spaceboss – One man. One suit. A planet full of aliens.">
-  <meta property="og:description" content="Run &amp; Gun mit sechs Leveln, sechs Bossen, Jetpack und Gamepad. Gratis für Windows und im Browser.">
+  <meta property="og:description" content="Run &amp; Gun mit sechs Leveln, sechs Bossen, Jetpack und Gamepad. Gratis für Windows, Linux und im Browser.">
   <meta property="og:url" content="https://pueski.de/spaceboss/">
   <meta property="og:image" content="https://pueski.de/spaceboss/img/og.jpg">
   <meta property="og:image:width" content="1200">
@@ -47,16 +47,16 @@
       <p class="tagline">One man. One suit. A planet full of aliens.</p>
       <p class="lead">Ein muskulöser Astronaut stürzt auf einem Alien-Planeten ab und schießt sich durch sechs Level bis in die Festung der Invasoren. Mit Jetpack, Extras, Gamepad und Bossen, die laufen, zielen und ausholen.</p>
       <div class="actions">
-        <a class="btn" href="#download">
+        <a class="btn" href="#download" id="get">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zm0 13 7.5 1.1v-7H3zm8.5 1.3L21 21v-8.4h-9.5zm0-15.6v7.3H21V3z"/></svg>
-          Für Windows laden
+          <span>Für Windows laden</span>
         </a>
         <a class="btn btn-ghost" href="play/">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
           Im Browser spielen
         </a>
       </div>
-      <p class="meta">Gratis · Version 0.1.0 · Windows 10/11 (64 Bit) · 138 MB</p>
+      <p class="meta">Gratis · Version 0.1.0 · Windows 10/11 und Linux (64 Bit)</p>
     </div>
     <a class="scroll" href="#spiel" aria-label="Weiter nach unten"><span></span></a>
   </section>
@@ -214,7 +214,7 @@
     <section class="section download" id="download">
       <div class="wrap">
         <p class="kicker">Download</p>
-        <h2>Spaceboss für Windows</h2>
+        <h2>Spaceboss für Windows und Linux</h2>
         <p class="intro">Gratis, ohne Konto, ohne Werbung. Die Musik ist dabei, Internet braucht das Spiel danach nicht mehr.</p>
         <div class="downloads">
           <article class="dl dl-main">
@@ -235,6 +235,15 @@
             </a>
             <p class="file">Spaceboss-0.1.0-portable.exe · 138 MB</p>
           </article>
+          <article class="dl" id="linux">
+            <h3>Linux</h3>
+            <p>Als AppImage: eine einzige Datei für Ubuntu, Fedora, Mint und die meisten anderen, ohne Installation. Wer lieber auspackt, nimmt das .tar.gz.</p>
+            <a class="btn btn-ghost" href="downloads/Spaceboss-0.1.0.AppImage" download>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v10.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4 3.6 3.6zM4 19h16v2H4z"/></svg>
+              AppImage laden
+            </a>
+            <p class="file">Spaceboss-0.1.0.AppImage · 151 MB · <a href="downloads/Spaceboss-0.1.0-linux.tar.gz" download>als .tar.gz</a> (145 MB)</p>
+          </article>
           <article class="dl dl-web">
             <h3>Im Browser</h3>
             <p>Lieber gleich loslegen? Die Browser-Version ist dasselbe Spiel, am besten in Chrome, Edge oder Firefox.</p>
@@ -251,8 +260,12 @@
             <p>Die Programme sind nicht digital signiert. Beim ersten Start zeigt Windows deshalb „Der Computer wurde durch Windows geschützt“. Klicke auf <strong>Weitere Informationen</strong> und dann auf <strong>Trotzdem ausführen</strong>.</p>
           </div>
           <div class="note">
+            <h3>Unter Linux</h3>
+            <p>Das AppImage in den Dateieigenschaften als <strong>ausführbar</strong> markieren (oder <code>chmod +x Spaceboss-0.1.0.AppImage</code>) und starten. Das .tar.gz auspacken und <code>spaceboss</code> starten.</p>
+          </div>
+          <div class="note">
             <h3>Voraussetzungen</h3>
-            <p>Windows 10 oder 11, 64 Bit. Ein Bildschirm mit 1920×1080 sieht am besten aus. <kbd>F11</kbd> schaltet in der App Vollbild um.</p>
+            <p>Windows 10 oder 11 oder ein aktuelles Linux, jeweils 64 Bit. Ein Bildschirm mit 1920×1080 sieht am besten aus. <kbd>F11</kbd> schaltet in der App Vollbild um.</p>
           </div>
         </div>
         <details class="hashes">
@@ -260,6 +273,8 @@
           <dl>
             <dt>Spaceboss-Setup-0.1.0.exe</dt><dd><code>1296fe23e21e5ac7db0c579638dfe3b4230b73e050ee2012c529b5aad527f4d0</code></dd>
             <dt>Spaceboss-0.1.0-portable.exe</dt><dd><code>004fd4784f8f1843009ce24540cb50b7c8a2b552f4bddbbbd6c0b53147324114</code></dd>
+            <dt>Spaceboss-0.1.0.AppImage</dt><dd><code>1ffe6daeb7ff5359b8660b4426f6d8c66ff011d8d900b09d43af9cfbb4d0662d</code></dd>
+            <dt>Spaceboss-0.1.0-linux.tar.gz</dt><dd><code>a44ac4643a8603e34bf6085650227b500a5899d8e3b022b54a02dee75ddd9938</code></dd>
           </dl>
         </details>
       </div>

@@ -71,16 +71,34 @@ nach `dist/` einen Installer (`Spaceboss-Setup-<version>.exe`) und eine portable
 läuft. Die Songs aus `music/` sind eingebaut; eigene Songs gehen über `MUSIC_DIR` oder einen Ordner `music`
 neben der `.exe`. Die Pakete sind nicht signiert, beim ersten Start fragt Windows deshalb nach.
 
+### Linux
+
+```bash
+npm run dist:linux
+```
+
+baut nach `dist/` ein `Spaceboss-<version>.AppImage` (eine Datei, läuft ohne Installation:
+`chmod +x Spaceboss-*.AppImage` und starten) und ein `Spaceboss-<version>-linux.tar.gz` (auspacken, `spaceboss`
+starten). Eigene Songs gehen auch hier über `MUSIC_DIR` oder einen Ordner `music` neben dem AppImage bzw. neben
+`spaceboss`.
+
+Unter Linux läuft electron-builder direkt. Unter Windows und macOS fehlen ihm Linux-Werkzeuge, dort baut
+`npm run dist:linux` deshalb im Docker-Container `electronuserland/builder` – Docker Desktop muss laufen. Der
+erste Lauf lädt das Image und Electron für Linux, danach geht es schneller; `node_modules` für den Container
+liegt in einem eigenen Docker-Volume, das `node_modules` des Projekts bleibt unberührt. Den Windows-Build
+betrifft das alles nicht, `npm run dist` bleibt wie es ist.
+
 In der App schaltet **F11** Vollbild um (dazu wie im Browser F in den Menüs und Doppelklick im Spiel),
-`Spaceboss.exe --fullscreen` startet gleich im Vollbild. `SPACEBOSS_SMOKE=1` lädt das Spiel unsichtbar,
-gibt eine Prüfzeile aus und beendet sich wieder – praktisch, um einen Build zu testen.
+`Spaceboss.exe --fullscreen` (bzw. `./Spaceboss-*.AppImage --fullscreen`) startet gleich im Vollbild.
+`SPACEBOSS_SMOKE=1` lädt das Spiel unsichtbar, gibt eine Prüfzeile aus und beendet sich wieder – praktisch, um
+einen Build zu testen.
 
 npm 11 führt Installationsskripte nur nach Freigabe aus. Fehlt nach `npm install` die Electron-Laufzeit
 (`node_modules/electron/dist`), holt `node node_modules/electron/install.js` sie nach.
 
 ## Webseite
 
-Unter <https://pueski.de/spaceboss/> liegt eine Seite zum Spiel mit den Windows-Downloads; das
+Unter <https://pueski.de/spaceboss/> liegt eine Seite zum Spiel mit den Downloads für Windows und Linux; das
 Browser-Spiel selbst läuft darunter unter <https://pueski.de/spaceboss/play/>. Die Seite liegt in `site/`
 (statisch, ohne Abhängigkeiten, Schrift selbst gehostet), Caddy liefert sie aus `/var/www/spaceboss-web` aus.
 
@@ -88,11 +106,13 @@ Browser-Spiel selbst läuft darunter unter <https://pueski.de/spaceboss/play/>. 
 npx electron tools/screenshots.js   # echte Spielszenen: der Autopilot spielt, Electron fotografiert unsichtbar
 python tools/site_images.py         # Szenen zuschneiden, Titelbild, Vorschaubild, Favicons -> site/img/
 npm run dist                        # Windows-Installer und portable .exe -> dist/
-tools/deploy_site.sh                # Seite und .exe auf den Server (die .exe nur, wenn sie sich geändert haben)
+npm run dist:linux                  # AppImage und .tar.gz -> dist/
+tools/deploy_site.sh                # Seite und Downloads auf den Server (nur die, die sich geändert haben)
 ```
 
 Version, Dateigrößen und SHA-256-Prüfsummen stehen fest in `site/index.html` und müssen bei einer neuen
-Version dort mitgezogen werden.
+Version oder einem neuen Build dort mitgezogen werden. `tools/deploy_site.sh` prüft das vor dem Hochladen und
+bricht mit der passenden Prüfsumme ab, wenn eine Datei in `dist/` nicht zur Seite passt.
 
 ## Steuerung
 
@@ -311,6 +331,6 @@ public/js/audio.js     Musik, Samples, synthetisierte Effekte
 public/js/main.js      Laden, Eingabe (Tastatur, Maus, Gamepad), Ablauf, Demo-Modus
 public/js/autopilot.js spielt in der Demo selbst
 public/assets/         Sprites und Texturen (aus tools/key_assets.py)
-tools/                 Asset-Pipeline (ComfyUI)
+tools/                 Asset-Pipeline (ComfyUI), Webseite, dist_linux.js für npm run dist:linux
 music/                 Songs
 ```

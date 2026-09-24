@@ -3,9 +3,10 @@
 //
 //   npm run app            Entwicklung (Songs aus ./music)
 //   npm run dist           Installer und portable .exe nach dist/
+//   npm run dist:linux     AppImage und .tar.gz nach dist/ (unter Windows über Docker)
 //
 // F11 schaltet Vollbild um (im Menü geht auch F, im Spiel Doppelklick), --fullscreen startet im Vollbild.
-// Eigene Songs: MUSIC_DIR setzen oder einen Ordner "music" neben die .exe legen.
+// Eigene Songs: MUSIC_DIR setzen oder einen Ordner "music" neben die .exe bzw. das AppImage legen.
 const { app, BrowserWindow, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -19,9 +20,17 @@ if (!app.requestSingleInstanceLock()) app.quit();
 
 let win = null, srv = null;
 
+// Ordner der gestarteten Datei: portable .exe und AppImage laufen entpackt bzw. eingehängt woanders,
+// ihren echten Ort geben sie über Umgebungsvariablen mit
+function exeDir() {
+  if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
+  if (process.env.APPIMAGE) return path.dirname(process.env.APPIMAGE);
+  return path.dirname(process.execPath);
+}
+
 function musicDir() {
   if (process.env.MUSIC_DIR) return process.env.MUSIC_DIR;
-  const nextToExe = path.join(path.dirname(process.execPath), 'music');
+  const nextToExe = path.join(exeDir(), 'music');
   if (app.isPackaged && fs.existsSync(nextToExe)) return nextToExe;
   return app.isPackaged ? path.join(process.resourcesPath, 'music') : path.join(__dirname, '..', 'music');
 }
