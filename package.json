@@ -1,12 +1,64 @@
 {
   "name": "spaceboss",
+  "productName": "Spaceboss",
   "version": "0.1.0",
   "private": true,
   "description": "Run-and-Gun Jump'n'Run im Browser: ein muskulöser Astronaut gegen eine Alien-Invasion",
+  "author": "mpue",
+  "main": "electron/main.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "app": "electron .",
+    "dist": "electron-builder --win nsis portable",
+    "dist:dir": "electron-builder --dir"
   },
   "engines": {
     "node": ">=18"
+  },
+  "build": {
+    "appId": "de.mpue.spaceboss",
+    "productName": "Spaceboss",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**",
+      "server.js",
+      "public/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "music",
+        "to": "music"
+      }
+    ],
+    "icon": "electron/icon.png",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Spaceboss-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Spaceboss-${version}-portable.${ext}"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.games"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Game"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
   }
 }

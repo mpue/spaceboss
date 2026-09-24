@@ -55,6 +55,29 @@ jeweils ein Namensteil („metal man“, „king of steel“), sonst nimmt das S
 Level 1, 3 und 5 laufen auf *Metal man*, Level 2 und 4 auf *King of steel*, und zum Boss wird jeweils auf den
 anderen Song gewechselt.
 
+## Desktop-App (Electron)
+
+Das Spiel gibt es auch als eigenes Programm. Die App startet denselben Server wie `node server.js`, aber nur
+für diesen Rechner (`127.0.0.1`, freier Port) und zeigt das Spiel in einem eigenen Fenster ohne Menüleiste.
+Musik und Sounds laufen ohne vorherigen Klick, also auch schon auf dem Titel und in der Demo.
+
+```bash
+npm install
+npm run app
+```
+
+`npm run app` startet die Entwicklungsversion mit den Songs aus `music/`. `npm run dist` baut unter Windows
+nach `dist/` einen Installer (`Spaceboss-Setup-<version>.exe`) und eine portable `.exe`, die ohne Installation
+läuft. Die Songs aus `music/` sind eingebaut; eigene Songs gehen über `MUSIC_DIR` oder einen Ordner `music`
+neben der `.exe`. Die Pakete sind nicht signiert, beim ersten Start fragt Windows deshalb nach.
+
+In der App schaltet **F11** Vollbild um (dazu wie im Browser F in den Menüs und Doppelklick im Spiel),
+`Spaceboss.exe --fullscreen` startet gleich im Vollbild. `SPACEBOSS_SMOKE=1` lädt das Spiel unsichtbar,
+gibt eine Prüfzeile aus und beendet sich wieder – praktisch, um einen Build zu testen.
+
+npm 11 führt Installationsskripte nur nach Freigabe aus. Fehlt nach `npm install` die Electron-Laufzeit
+(`node_modules/electron/dist`), holt `node node_modules/electron/install.js` sie nach.
+
 ## Steuerung
 
 | Tastatur + Maus | Gamepad | |
@@ -110,6 +133,22 @@ Der Browser meldet ein Pad erst nach dem ersten Tastendruck, also einmal kurz dr
   mitgenommen – gegen die Laufrichtung kommt man nur langsam voran, mit ihr fliegt man förmlich.
 - **Waten:** Im Sumpf stehen Tümpel. Im Wasser läuft der Held nur noch mit 60 % Tempo, springt niedriger,
   fällt langsamer und kann nicht dashen. Das Wasser wird über ihm gezeichnet, er steckt also wirklich drin.
+
+### Demo-Modus
+
+Bleibt der Titel 20 Sekunden unberührt, spielt der Rechner selbst: ein Level nach dem anderen, mal vom Anfang,
+mal ab einem Checkpoint, mal direkt am Boss. Unten läuft ein Band mit **DEMO**, dem Levelnamen und „PRESS ANY
+KEY TO PLAY“. Jede Taste, jeder Klick, jede Pad-Eingabe und jede deutliche Mausbewegung bricht ab und führt
+zurück zum Titel. Eine Demo dauert höchstens 90 Sekunden und endet auch bei Game Over oder geschafftem Level.
+Bestwerte werden dabei nicht gespeichert.
+
+Gesteuert wird der Held vom **Autopiloten** (`public/js/autopilot.js`). Er baut jedes Frame dieselbe Eingabe,
+die sonst Tastatur oder Gamepad liefern, das Spiel merkt keinen Unterschied. Er läuft nach rechts, springt über
+Gruben, Säure und Wände, klettert bei zu hohen Wänden erst auf eine Plattform davor, wartet an Lasertoren,
+zielt mit Vorhalt auf den nächsten Gegner, wirft Granaten auf dicke Brocken, dasht durch Geschosse, springt
+über Schockwellen und tiefe Klingen und duckt sich unter hohe. Im Bosskampf pendelt er in der linken
+Arenahälfte. In der Demo nimmt der Held nur gut ein Drittel des Schadens, verlieren kann er trotzdem.
+In einer Simulation ohne Zeichnen schafft der Autopilot alle sechs Level samt Boss.
 
 ### Extras
 
@@ -193,9 +232,10 @@ Schaden, werden golden dargestellt und mit „CRIT!“ beschriftet.
 
 ## Test-Schalter
 
+`?demo=1` (Demo sofort starten, mit `&level=N` ab diesem Level), `?idle=5` (Demo schon nach 5 s Leerlauf),
 `?play=1` (Titel überspringen), `?level=2` (Level wählen), `?zoom=1.1&on=boss` (Kamera auf den Boss), `?god=1` (unverwundbar), `?weak=1` (Boss mit
 400 Trefferpunkten), `?at=330` (ab dieser Spalte starten), `?select=1` (direkt in die Levelauswahl), `?pad=1` (Gamepad-Testanzeige), `?zoom=3` (Kamera um den Helden vergrößern,
-zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 354, 231, 235, 286 und 286.
+zum Prüfen der Figur), F3 zeigt die FPS. Die Arenen liegen bei Spalte 354, 231, 235, 286, 286 und 274.
 Zum Beispiel <http://localhost:5190/?play=1&god=1&level=4&at=283> für das Finale.
 
 Im laufenden Spiel liegt der Spielzustand als `window.SB` in der Konsole (`SB.player.hp`, `SB.boss.hp`,
@@ -246,12 +286,14 @@ synthetisiert (`public/js/audio.js`).
 ## Projektstruktur
 
 ```
-server.js              statischer Server + /api/songs + /healthz (Port 5190)
-public/js/level.js     die drei Level aus ASCII-Abschnitten plus Aussehen, Musik und Boss (Legende oben)
+server.js              statischer Server + /api/songs + /healthz (Port 5190), start() für die App
+electron/main.js       Desktop-App: Server auf freiem Port, eigenes Fenster, Vollbild mit F11
+public/js/level.js     die sechs Level aus ASCII-Abschnitten plus Aussehen, Musik und Boss (Legende oben)
 public/js/game.js      Spiellogik: Held, Waffen, Gegner, Boss, Partikel
 public/js/render.js    Darstellung, zusammengesetzter Held, HUD, Titel
 public/js/audio.js     Musik, Samples, synthetisierte Effekte
-public/js/main.js      Laden, Eingabe (Tastatur, Maus, Gamepad), Ablauf
+public/js/main.js      Laden, Eingabe (Tastatur, Maus, Gamepad), Ablauf, Demo-Modus
+public/js/autopilot.js spielt in der Demo selbst
 public/assets/         Sprites und Texturen (aus tools/key_assets.py)
 tools/                 Asset-Pipeline (ComfyUI)
 music/                 Songs

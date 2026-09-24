@@ -145,8 +145,29 @@ def tileable(im, size=512):
     return out
 
 
+# Symbol der Desktop-App: quadratisch mit runden Ecken
+ICON = ("app_icon_37", 512)
+
+
+def app_icon():
+    src, size = ICON
+    f = RAW / f"{src}.png"
+    if not f.exists():
+        print("missing", f.name); return
+    from PIL import ImageDraw
+    im = Image.open(f).convert("RGBA").resize((size, size), Image.LANCZOS)
+    mask = Image.new("L", (size * 4, size * 4), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, size * 4 - 1, size * 4 - 1), radius=size * 4 // 6, fill=255)
+    im.putalpha(mask.resize((size, size), Image.LANCZOS))
+    out = ROOT / "electron" / "icon.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    im.save(out, optimize=True)
+    print("icon", out.name, im.size)
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    app_icon()
     for name, (src, mw, mh) in SPRITES.items():
         f = RAW / f"{src}.png"
         if not f.exists():

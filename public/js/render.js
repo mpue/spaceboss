@@ -1838,9 +1838,23 @@
       if (screen.note) this.toast(screen.note);
       if (screen.pad) this.padDebug(screen.pad);
       if (screen.mode === 'pause') this.overlay('PAUSE', 'PRESS ESC / START TO CONTINUE');
+      if (screen.demo) this.demoBanner(g, screen);
       if (screen.mode === 'over') this.endScreen(g, false);
       if (screen.mode === 'won') this.endScreen(g, true);
       if (screen.fps) this.glowText(screen.fps + ' FPS', `700 18px ${FONT}`, '#9ad8ff', '#000', 0, W - 40, H - 20, 'right');
+    }
+
+    // Demo: Balken oben und unten wie im Kino, dazu der Hinweis zum Einsteigen
+    demoBanner(g, screen) {
+      const c = this.c, t = g.time;
+      c.fillStyle = 'rgba(0,0,0,0.55)';
+      c.fillRect(0, H - 86, W, 86);
+      this.glowText('DEMO', `900 34px ${FONT}`, '#ffffff', '#ff8a2a', 14, 60, H - 30, 'left');
+      this.glowText(g.L.def.name, `700 22px ${FONT}`, '#ffd9a0', '#ff7a00', 6, 215, H - 34, 'left');
+      if (Math.sin(t * 4) > -0.3) {
+        const hint = screen.device === 'gamepad' ? 'PRESS ANY BUTTON TO PLAY' : 'PRESS ANY KEY TO PLAY';
+        this.glowText(hint, `900 30px ${FONT}`, '#ffffff', '#3fb4ff', 14, W - 60, H - 32, 'right');
+      }
     }
 
     // Kurze Meldung oben, etwa wenn ein Gamepad kommt oder geht

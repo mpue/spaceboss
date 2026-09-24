@@ -5,3 +5,6 @@ __pycache__/
 
 # Roh-Renders aus ComfyUI (tools/gen_assets.py erzeugt sie neu), Kontaktbogen und Log
 art/
+
+# Desktop-App: Build-Ausgabe von electron-builder
+dist/

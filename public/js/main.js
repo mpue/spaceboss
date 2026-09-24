@@ -26,6 +26,7 @@
   const mouse = { x: W / 2, y: H / 2, down: false, right: false, moved: -99 };
   let device = 'keyboard';
   let lastMouseUse = -99;
+  let touched = false;          // hat ein Mensch seit dem letzten Frame etwas gedrückt oder bewegt?
 
   const KEYMAP = {
     jump: ['Space', 'KeyK', 'KeyW', 'ArrowUp'],
@@ -40,6 +41,7 @@
     if (e.repeat) { if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault(); return; }
     keys.add(e.code);
     device = 'keyboard';
+    touched = true;
     for (const [a, list] of Object.entries(KEYMAP)) if (list.includes(e.code)) pressed[a] = true;
     const slot = { Digit1: 'blaster', Digit2: 'spread', Digit3: 'laser', Digit4: 'rocket' }[e.code];
     if (slot) pressed.slot = slot;
@@ -67,11 +69,13 @@
     Object.assign(mouse, toCanvas(e));
     lastMouseUse = performance.now() / 1000;
     if (device !== 'gamepad' || Math.abs(e.movementX) + Math.abs(e.movementY) > 4) device = 'keyboard';
+    if (Math.abs(e.movementX) + Math.abs(e.movementY) > 8) touched = true;
   });
   canvas.addEventListener('mousedown', e => {
     Object.assign(mouse, toCanvas(e));
     lastMouseUse = performance.now() / 1000;
     device = 'keyboard';
+    touched = true;
     if (e.button === 0) { mouse.down = true; pressed.click = true; }
     if (e.button === 2) { mouse.right = true; pressed.grenade = true; }
     unlock();
@@ -129,7 +133,7 @@
     for (const p of list) {
       const busy = p.buttons.some(b => b.pressed || b.value > TRIG) ||
         p.axes.some((v, i) => i < 4 && Math.abs(v) > 0.5);
-      if (busy) { PAD.index = p.index; PAD.id = p.id; }
+      if (busy) { PAD.index = p.index; PAD.id = p.id; touched = true; }
     }
     const p = list.find(x => x.index === PAD.index) || list[0];
     PAD.index = p.index;
@@ -283,16 +287,18 @@
     else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {});
   }
 
-  // index: Level (0..2), carry: Punkte, Leben und Waffen aus dem vorigen Level
-  function startGame(index = 0, carry = null) {
+  // index: Level, carry: Punkte, Leben und Waffen aus dem vorigen Level, demoAt: Startspalte der Demo
+  function startGame(index = 0, carry = null, demoAt = null) {
     const level = Level.build(index);
     const music = level.def.music;
+    const vol = demoAt !== null ? 0.6 : 1;     // die Demo spielt leiser
     game = new Game(level, audio, {
-      rumble, carry,
+      rumble: demoAt !== null ? () => {} : rumble, carry,
       god: params.get('god') === '1',
+      demo: demoAt !== null,
       weak: Number(params.get('weak')) ? 400 : 0,
-      at: params.get('at') && !carry ? Number(params.get('at')) : 0,
-      onBoss: () => { audio.fadeMusic(1.5); setTimeout(() => playMusic(music.boss, 0.6), 1600); },
+      at: demoAt !== null ? demoAt : params.get('at') && !carry ? Number(params.get('at')) : 0,
+      onBoss: () => { audio.fadeMusic(1.5); setTimeout(() => playMusic(music.boss, 0.6 * vol), 1600); },
     });
     window.SB = game;
     window.SBR = renderer;                     // zum Nachschauen und Justieren in der Konsole (window.game ist das Canvas)
@@ -300,12 +306,43 @@
     audio.confirm();
     audio.muffle(false);
     audio.stopMusic();
-    playMusic(music.level, 0.5);
+    playMusic(music.level, 0.5 * vol);
     // Songs des nächsten Levels schon vorladen
     songsReady.then(() => {
       const nx = Level.LEVELS[index + 1];
       if (nx) { loadSong(songFor(nx.music.level)); loadSong(songFor(nx.music.boss)); }
     });
+  }
+
+  // ---------- Demo-Modus ----------
+  //
+  // Bleibt der Titel eine Weile unberührt, spielt der Rechner selbst: ein Level nach dem anderen, mal vom
+  // Anfang, mal ab einem Checkpoint, mal direkt am Boss. Jede Taste, jeder Klick, jede Pad-Eingabe und
+  // jede deutliche Mausbewegung bricht ab und führt zurück zum Titel. ?demo=1 startet sofort.
+  const DEMO_IDLE = Number(params.get('idle')) || 20;   // Sekunden Leerlauf auf dem Titel
+  const DEMO_LEN = 90;                                   // so lange läuft eine Demo höchstens
+  let demo = null;
+  let idleT = 0;
+  let demoLevel = Math.floor(Math.random() * Level.LEVELS.length);
+
+  function startDemo() {
+    demoLevel = (demoLevel + 1) % Level.LEVELS.length;
+    const L = Level.build(demoLevel), T = L.T;
+    const marks = L.spawns.filter(s => s.ch === 'X').map(s => s.col);
+    const r = Math.random();
+    let at = 0;                                          // Anfang
+    if (r < 0.35 && L.arena) at = L.arena.x / T - 8;     // Bosskampf
+    else if (r < 0.75 && marks.length) at = marks[Math.floor(Math.random() * marks.length)];
+    startGame(demoLevel, null, at);
+    demo = { pilot: new Autopilot(), t: 0, at };
+    window.SBD = demo;                         // zum Nachschauen in der Konsole
+  }
+  function endDemo() {
+    demo = null;
+    game = null;
+    mode = 'title';
+    titleT = 0; idleT = 0;
+    audio.stopMusic(); audio.laser(false); audio.muffle(false);
   }
 
   // ---------- Schleife ----------
@@ -353,6 +390,13 @@
     if (fpsAcc > 0.5) { fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
     const inp = buildInput(dt);
     const loading = loaded < total ? loaded / total : 0;
+    const human = touched;
+    touched = false;
+    if (demo && human) {                         // ein Mensch ist da: Demo sofort beenden
+      endDemo();
+      requestAnimationFrame(frame);
+      return;
+    }
     if (mode === 'title' || mode === 'select') {
       titleT += dt;
       const common = { time: titleT, loading, device, note: PAD.noteT > 0 ? PAD.note : null,
@@ -360,6 +404,8 @@
       if (mode === 'title') {
         if (renderer) renderer.draw(null, common);
         if (!loading && (inp.pressed.ok || inp.pressed.jump)) { mode = 'select'; audio.confirm(); unlock(); }
+        idleT = human ? 0 : idleT + dt;
+        if (mode === 'title' && !loading && idleT > DEMO_IDLE) startDemo();
       } else {
         // Levelauswahl
         const cards = cardRects();
@@ -377,14 +423,19 @@
           cross: inp.mouseAim ? { x: mouse.x, y: mouse.y } : null }));
       }
     } else {
-      if (inp.pressed.pause && (mode === 'play' || mode === 'pause')) {
+      const use = demo ? demo.pilot.input(game, dt) : inp;
+      if (demo) {
+        demo.t += dt;
+        if (demo.t > DEMO_LEN || game.over || (game.won && game.endT > 3)) { endDemo(); requestAnimationFrame(frame); return; }
+      }
+      if (!demo && inp.pressed.pause && (mode === 'play' || mode === 'pause')) {
         mode = mode === 'play' ? 'pause' : 'play';
         audio.muffle(mode === 'pause');
         audio.laser(false);
       }
-      if (mode === 'play' || mode === 'over' || mode === 'won') game.update(dt, mode === 'play' ? inp : { pressed: {} });
+      if (mode === 'play' || mode === 'over' || mode === 'won') game.update(dt, mode === 'play' ? use : { pressed: {} });
       if (mode === 'play' && game.over) { mode = 'over'; game.endT = 0; audio.fadeMusic(2, 0.15); }
-      if (mode === 'play' && game.won && !game.saved) {
+      if (mode === 'play' && game.won && !game.saved && !demo) {
         game.saved = true;                       // Level geschafft: Bestwert merken
         saveCleared(game.L.index, game.score, Math.floor(game.time));
       }
@@ -395,7 +446,8 @@
       }
       if (game) renderer.draw(game, {
         mode, fps: showFps ? fps : 0, device, zoom: Number(params.get('zoom')) || 0, zoomOn: params.get('on'),
-        cross: mode === 'play' ? crosshair(inp, game) : null,
+        cross: mode === 'play' && !demo ? crosshair(inp, game) : null,
+        demo: !!demo,
         note: PAD.noteT > 0 ? PAD.note : null,
         pad: padDebug ? inp.pad : null,
       });
@@ -410,7 +462,8 @@
     await Promise.all([...IMAGES.map(n => loadImage(n, 'png')), ...JPGS.map(n => loadImage(n, 'jpg'))]);
     await document.fonts.ready;
     renderer = new Renderer(canvas, images);
-    if (params.get('play') === '1') startGame(startLevel);
+    if (params.get('demo') === '1') { demoLevel = startLevel - 1; startDemo(); }
+    else if (params.get('play') === '1') startGame(startLevel);
     else if (params.get('select') === '1') { mode = 'select'; sel = startLevel; }
   })();
 })();

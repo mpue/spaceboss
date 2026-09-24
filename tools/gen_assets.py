@@ -141,6 +141,9 @@ ASSETS = {
               GREEN, 1024, 1024),
     "mortar": ("a four legged alien mortar walker machine, armored sand colored hull with a short thick mortar tube "
                "pointing up and glowing orange lights, facing to the left, exact side view profile", GREEN, 1536, 1024),
+    # Symbol der Desktop-App (Electron)
+    "app_icon": ("video game app icon, the helmet of a muscular astronaut space marine in a white and orange armored space suit with a glowing gold reflective visor, bold heroic close up, orange explosion glow and a ringed planet behind, dark blue space background, centered, clean readable silhouette, square",
+                 "no text, no letters, no frame, no border", 1024, 1024),
     # Extras: zeitlich begrenzte Verstärkungen zum Einsammeln
     "pu_jet": ("a compact sci-fi jetpack power-up item, twin big glowing orange thruster nozzles, white and orange "
                "armored casing with carrying straps, collectible video game item, three quarter view", GREEN, 1024, 1024),

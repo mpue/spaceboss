@@ -862,7 +862,7 @@
         if (p.shieldHp <= 0) { p.pow.shield = 0; this.audio.powerDown(); this.float(p.x, p.y - 120, 'SHIELD BROKEN', '#6ae8ff'); }
         return;
       }
-      p.hp -= dmg;
+      p.hp -= this.opts.demo ? Math.ceil(dmg * 0.35) : dmg;
       p.inv = P.inv;
       this.hurtFlash = 1;
       this.shake = Math.max(this.shake, 0.45);

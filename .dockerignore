@@ -13,3 +13,6 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 README.md
+# Desktop-App (Electron) braucht der Server nicht
+electron
+dist
